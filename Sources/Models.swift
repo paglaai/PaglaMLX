@@ -1,0 +1,50 @@
+import Foundation
+import SwiftUI
+
+// MARK: - MLXModel
+struct MLXModel: Identifiable, Hashable {
+    var id: String { path }
+    let name: String
+    let path: String
+    let sizeGB: Double
+    let contextLength: Int
+    let modelType: String
+    
+    var sizeFormatted: String {
+        return sizeGB > 0 ? String(format: "%.1f GB", sizeGB) : "Unknown Size"
+    }
+    
+    var typeIcon: String {
+        return modelType == "VLM" ? "eye" : "cpu"
+    }
+}
+
+// MARK: - LogEntry
+struct LogEntry: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    let level: Level
+    
+    enum Level {
+        case info
+        case stderr
+        case error
+        case success
+        case detail
+    }
+    
+    var color: Color {
+        switch level {
+        case .info:    return Color(NSColor.textColor)
+        case .stderr:  return Color.orange
+        case .error:   return Color.red
+        case .success: return Color.green
+        case .detail:  return Color.secondary
+        }
+    }
+    
+    init(_ text: String, level: Level = .info) {
+        self.text = text
+        self.level = level
+    }
+}
