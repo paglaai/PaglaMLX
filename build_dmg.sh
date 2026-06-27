@@ -16,6 +16,7 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$RELEASE_BIN" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$PROJECT_DIR/PaglaMLX-Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+cp "$PROJECT_DIR/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
 echo "=== Signing bundle ==="
