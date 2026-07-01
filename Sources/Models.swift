@@ -25,12 +25,32 @@ struct LogEntry: Identifiable, Equatable {
     let text: String
     let level: Level
     
-    enum Level {
+    enum Level: CaseIterable {
         case info
         case stderr
         case error
         case success
         case detail
+
+        var label: String {
+            switch self {
+            case .info:    return "INFO"
+            case .stderr:  return "STDERR"
+            case .error:   return "ERROR"
+            case .success: return "OK"
+            case .detail:  return "DETAIL"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .info:    return Color(NSColor.textColor)
+            case .stderr:  return Color.orange
+            case .error:   return Color.red
+            case .success: return Color.green
+            case .detail:  return Color.secondary
+            }
+        }
     }
     
     var color: Color {

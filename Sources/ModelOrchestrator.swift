@@ -15,6 +15,26 @@ import AppKit
     var isRunning = false
     var logs: [LogEntry] = []
     
+    // Health tracking
+    enum HealthStatus: String, CaseIterable {
+        case unknown = "unknown"
+        case healthy = "healthy"
+        case degraded = "degraded"
+        case unreachable = "unreachable"
+
+        var color: Color {
+            switch self {
+            case .unknown:     return .gray
+            case .healthy:     return .green
+            case .degraded:    return .orange
+            case .unreachable: return .red
+            }
+        }
+    }
+    var healthStatus = HealthStatus.unknown
+    var consecutiveHealthFailures = 0
+    var lastHealthCheck: Date?
+
     /// Callback fired when this instance terminates (used by orchestrator to update gateway).
     var onTermination: (() -> Void)?
     
@@ -121,6 +141,30 @@ import AppKit
     }
     
     func clearLogs() { logs = [] }
+
+    func performHealthCheck() async {
+        let url = URL(string: "http://127.0.0.1:\(port)/v1/models")!
+        var request = URLRequest(url: url, timeoutInterval: 5)
+        let apiKey = await Task { @MainActor in SettingsManager.shared.apiKey }.value
+        if !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let ok = (response as? HTTPURLResponse)?.statusCode == 200
+            if ok {
+                consecutiveHealthFailures = 0
+                healthStatus = .healthy
+            } else {
+                consecutiveHealthFailures += 1
+                healthStatus = consecutiveHealthFailures >= 3 ? .unreachable : .degraded
+            }
+        } catch {
+            consecutiveHealthFailures += 1
+            healthStatus = consecutiveHealthFailures >= 3 ? .unreachable : .degraded
+        }
+        lastHealthCheck = Date()
+    }
     
     private func append(_ text: String, level: LogEntry.Level) {
         logs.append(LogEntry(text, level: level))
@@ -139,10 +183,11 @@ import AppKit
     
     var models: [MLXModel] = []
     var selectedModel: MLXModel?
-    var instances: [String: ModelInstance] = [:] // Keyed by model.name
+    var instances: [String: ModelInstance] = [:]
     var errorMessage: String?
     
     private var nextPort = 8000
+    private var healthTimer: Timer?
     
     // Fallback references for views migrating from ServerManager
     var isRunning: Bool {
@@ -190,7 +235,8 @@ import AppKit
         }
         
         newInstance.start()
-        
+
+        startHealthPolling()
         updateGateway()
         
         // Update gateway routing when this instance terminates
@@ -240,14 +286,40 @@ import AppKit
         
         if routes.isEmpty {
             RoutingGateway.shared.stop()
+            stopHealthPolling()
         } else if !RoutingGateway.shared.isRunning {
             RoutingGateway.shared.start()
+            startHealthPolling()
         }
     }
     
     func clearLogs() {
         guard let sel = selectedModel else { return }
         instances[sel.name]?.clearLogs()
+    }
+
+    // MARK: - Health Polling
+
+    func startHealthPolling() {
+        healthTimer?.invalidate()
+        healthTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.pollHealth()
+            }
+        }
+        // Fire immediately for first check
+        Task { await pollHealth() }
+    }
+
+    func stopHealthPolling() {
+        healthTimer?.invalidate()
+        healthTimer = nil
+    }
+
+    private func pollHealth() async {
+        for (_, inst) in instances where inst.isRunning {
+            await inst.performHealthCheck()
+        }
     }
     
     // MARK: - Scanning & Python (migrated from ServerManager)

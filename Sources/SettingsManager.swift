@@ -96,6 +96,9 @@ import SwiftUI
     var togetherKey: String {
         didSet { defaults.set(togetherKey, forKey: K.togetherKey) }
     }
+    var freeRouterKey: String {
+        didSet { defaults.set(freeRouterKey, forKey: K.freeRouterKey) }
+    }
     var freeRouterEnabled: Bool {
         didSet { defaults.set(freeRouterEnabled, forKey: K.freeRouterEnabled) }
     }
@@ -200,6 +203,7 @@ import SwiftUI
         geminiKey         = d.string(forKey: K.geminiKey) ?? ""
         groqKey           = d.string(forKey: K.groqKey) ?? ""
         togetherKey       = d.string(forKey: K.togetherKey) ?? ""
+        freeRouterKey     = d.string(forKey: K.freeRouterKey) ?? ""
         freeRouterEnabled = d.bool(forKey: K.freeRouterEnabled)
         
         if let data = d.data(forKey: K.personas), let p = try? JSONDecoder().decode([Persona].self, from: data) {
@@ -277,6 +281,7 @@ import SwiftUI
         static let geminiKey        = "geminiKey"
         static let groqKey           = "groqKey"
         static let togetherKey       = "togetherKey"
+        static let freeRouterKey     = "freeRouterKey"
         static let freeRouterEnabled = "freeRouterEnabled"
         static let personas         = "personas"
         static let presets          = "presets"

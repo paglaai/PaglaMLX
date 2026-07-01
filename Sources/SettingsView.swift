@@ -324,20 +324,16 @@ struct SettingsView: View {
             // MARK: 7. Cloud / BYOK
             Form {
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Toggle(isOn: $settings.freeRouterEnabled) {
-                            Text("Free Router")
-                                .font(.custom("Lucida Grande", size: 13))
-                        }
-                        .tint(Color(hex: "#3366cc"))
+                    VStack(alignment: .leading, spacing: 8) {
+                        ProviderRow(label: "Free Router", placeholder: "sk-or-... (free, no card needed)", key: $settings.freeRouterKey)
 
-                        Text("When enabled, \"model=auto\" routes to the best local model via heuristics; \"model=free\" or unknown model prefixes route through external APIs using your keys below.")
-                            .font(.custom("Lucida Grande", size: 13))
+                        Text("Set your OpenRouter API key here. When you send \"model=free\", PaglaMLX routes through OpenRouter — they pick the cheapest capable model for your request. Get a free key at openrouter.ai/keys (no credit card required).")
+                            .font(.custom("Lucida Grande", size: 12))
                             .foregroundColor(Color(hex: "#a0a0a0"))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } header: {
-                    Text("Cloud Proxy & Auto-Router")
+                    Text("Free Router — Powered by OpenRouter")
                         .font(.custom("Lucida Grande", size: 14.95))
                 }
 
@@ -361,19 +357,15 @@ struct SettingsView: View {
 
                 Section {
                     VStack(spacing: 1) {
-                        ProviderRow(label: "OpenRouter",   placeholder: "sk-or-...", key: $settings.openrouterKey)
-                        divider
-                        ProviderRow(label: "Groq",         placeholder: "gsk_...",   key: $settings.groqKey)
-                        divider
-                        ProviderRow(label: "Together AI",  placeholder: "...",       key: $settings.togetherKey)
+                        ProviderRow(label: "OpenRouter", placeholder: "sk-or-...", key: $settings.openrouterKey)
                     }
                     .padding(.vertical, 4)
 
-                    Text("Prefix with \"openrouter/\", \"groq/\", or \"together/\" to route. Free Router toggle also enables OpenRouter fallback for unrecognized models.")
+                    Text("Prefix with \"openrouter/\" to pick a specific model. For automatic cheapest routing, use the Free Router key above with \"model=free\".")
                         .font(.custom("Lucida Grande", size: 13))
                         .foregroundColor(Color(hex: "#a0a0a0"))
                 } header: {
-                    Text("Free / Community API Keys")
+                    Text("Advanced: OpenRouter (Direct)")
                         .font(.custom("Lucida Grande", size: 14.95))
                 }
 
@@ -387,7 +379,7 @@ struct SettingsView: View {
                         }
                         .foregroundColor(Color(hex: "#a0a0a0"))
 
-                        Text("Auto-Router routes model=\"auto\" via: multimodal → long context → keyword intent (code / math) → default fallback.")
+                        Text("model=\"auto\" routes via: multimodal → long context → keyword (code/math) → first running local model. model=\"free\" routes through the Free Router provider (OpenRouter).")
                             .font(.custom("Lucida Grande", size: 13))
                             .foregroundColor(Color(hex: "#a0a0a0"))
                             .fixedSize(horizontal: false, vertical: true)
@@ -559,6 +551,34 @@ private struct ApiDetailsTab: View {
                             }
                             """#
                         }
+
+                        providerBlock("OpenClaw") {
+                            #"""
+                            {
+                              "models": {
+                                "providers": {
+                                  "lengtamlx": {
+                                    "baseUrl": "\#(apiBase)",
+                                    "apiKey": "\#(apiKey)",
+                                    "api": "openai-completions"
+                                  }
+                                }
+                              }
+                            }
+                            """#
+                        }
+
+                        providerBlock("Agent Hermes") {
+                            #"""
+                            model:
+                              provider: custom
+                              models:
+                                - name: PaglaMLX
+                                  model: auto
+                                  apiBase: \#(apiBase)
+                                  apiKey: \#(apiKey)
+                            """#
+                        }
                     }
                     .padding(.vertical, 4)
                 }
@@ -567,13 +587,11 @@ private struct ApiDetailsTab: View {
                 GroupBox(label: Label("Routing Table", systemImage: "arrow.triangle.branch").font(.headline)) {
                     VStack(alignment: .leading, spacing: 4) {
                         routeRow("auto", "Best local model (Auto-Router)")
+                        routeRow("free", "OpenRouter auto (Free Router)")
                         routeRow("gpt-* / o1 / o3", "OpenAI API")
                         routeRow("claude-*", "Anthropic API")
                         routeRow("gemini-*", "Gemini API")
-                        routeRow("openrouter/*", "OpenRouter")
-                        routeRow("groq/*", "Groq")
-                        routeRow("together/*", "Together AI")
-                        routeRow("free", freeRouterEnabled ? "OpenRouter (Free Router)" : "Disabled (toggle in Cloud tab)")
+                        routeRow("openrouter/*", "OpenRouter (direct)")
                     }
                     .padding(.vertical, 4)
                 }

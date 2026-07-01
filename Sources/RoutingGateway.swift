@@ -26,7 +26,7 @@ import AppKit
         
         // Write the python gateway script to disk
         let script = """
-import os, sys, json, httpx, asyncio, re
+import os, sys, json, httpx, asyncio, re, time
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
 import uvicorn
@@ -35,6 +35,7 @@ app = FastAPI(title="PaglaMLX Routing Gateway")
 
 API_KEY = os.environ.get("LENGTA_API_KEY", "")
 OR_KEY = os.environ.get("OPENROUTER_KEY", "")
+FREE_KEY = os.environ.get("FREE_ROUTER_KEY", "") or OR_KEY
 ANT_KEY = os.environ.get("ANTHROPIC_KEY", "")
 OAI_KEY = os.environ.get("OPENAI_KEY", "")
 GEM_KEY = os.environ.get("GEMINI_KEY", "")
@@ -72,6 +73,24 @@ def first_local_port(local_routes):
     for v in local_routes.values():
         return v
     return None
+
+# ---------------------------------------------------------------------------
+# OpenAI-format error response
+# ---------------------------------------------------------------------------
+
+def openai_error(message, code="server_error", status=502):
+    return Response(
+        content=json.dumps({
+            "error": {
+                "message": message,
+                "type": code,
+                "param": None,
+                "code": code
+            }
+        }),
+        status_code=status,
+        media_type="application/json"
+    )
 
 # ---------------------------------------------------------------------------
 # Anthropic → OpenAI message translation
@@ -292,8 +311,51 @@ async def check_auth(request: Request, call_next):
     if API_KEY and request.method != "OPTIONS":
         auth = request.headers.get("authorization", "")
         if auth != f"Bearer {API_KEY}":
-            return Response(content="Unauthorized", status_code=401)
+            return openai_error("Unauthorized", "authentication_error", 401)
     return await call_next(request)
+
+# ---------------------------------------------------------------------------
+# Provider compliance endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "version": "1.2.0"}
+
+MODELS_DIR = os.environ.get("MODELS_DIR", "")
+
+@app.get("/v1/models")
+async def list_models():
+    local_routes = get_local_routes()
+    now_ts = int(time.time())
+    model_set = {}
+
+    # Running local models
+    for name in local_routes:
+        model_set[name] = {"id": name, "object": "model", "created": now_ts, "owned_by": "local"}
+
+    # Available local models from disk (not yet running)
+    if MODELS_DIR and os.path.isdir(MODELS_DIR):
+        for entry in sorted(os.listdir(MODELS_DIR)):
+            model_path = os.path.join(MODELS_DIR, entry)
+            if os.path.isdir(model_path) and entry not in model_set:
+                model_set[entry] = {"id": entry, "object": "model", "created": now_ts, "owned_by": "local"}
+
+    # Configured cloud models
+    if OAI_KEY:
+        for mid in ("gpt-4o", "gpt-4o-mini", "gpt-4.1", "o3-mini"):
+            model_set[mid] = {"id": mid, "object": "model", "created": now_ts, "owned_by": "openai"}
+    if ANT_KEY:
+        for mid in ("claude-sonnet-4-20250514", "claude-3-5-haiku-latest", "claude-opus-4-20250514"):
+            model_set[mid] = {"id": mid, "object": "model", "created": now_ts, "owned_by": "anthropic"}
+    if GEM_KEY:
+        model_set["gemini-2.0-flash"] = {"id": "gemini-2.0-flash", "object": "model", "created": now_ts, "owned_by": "google"}
+    if FREE_KEY:
+        model_set["free"] = {"id": "free", "object": "model", "created": now_ts, "owned_by": "openrouter"}
+    if OR_KEY:
+        model_set["openrouter/auto"] = {"id": "openrouter/auto", "object": "model", "created": now_ts, "owned_by": "openrouter"}
+
+    return {"object": "list", "data": list(model_set.values())}
 
 # ---------------------------------------------------------------------------
 # Anthropic /v1/messages endpoint (native translation)
@@ -430,15 +492,21 @@ async def proxy(request: Request, path: str):
     elif model_name:
         name_lower = model_name.lower()
         
-        if name_lower.startswith("gpt-") or name_lower.startswith("o1") or name_lower.startswith("o3"):
+        # model=free → Free Router via OpenRouter auto
+        if name_lower == "free" and FREE_KEY:
+            target_url = f"https://openrouter.ai/api/{path}"
+            fwd_headers["authorization"] = f"Bearer {FREE_KEY}"
+            if body and "model" in body:
+                body["model"] = "openrouter/auto"
+            fwd_headers["x-free-router"] = "openrouter"
+            
+        elif name_lower.startswith("gpt-") or name_lower.startswith("o1") or name_lower.startswith("o3"):
             if OAI_KEY:
                 target_url = f"https://api.openai.com/{path}"
                 fwd_headers["authorization"] = f"Bearer {OAI_KEY}"
                 
         elif name_lower.startswith("claude-"):
             if ANT_KEY:
-                # Anthropic API requests route through the /v1/messages handler above,
-                # but if they hit here (e.g. /v1/complete), forward with the key.
                 target_url = f"https://api.anthropic.com/{path}"
                 fwd_headers["x-api-key"] = ANT_KEY
                 fwd_headers.pop("authorization", None)
@@ -452,16 +520,6 @@ async def proxy(request: Request, path: str):
             target_url = f"https://openrouter.ai/api/{path}"
             if OR_KEY:
                 fwd_headers["authorization"] = f"Bearer {OR_KEY}"
-
-        elif name_lower.startswith("groq/"):
-            if GROQ_KEY:
-                target_url = f"https://api.groq.com/openai/{path}"
-                fwd_headers["authorization"] = f"Bearer {GROQ_KEY}"
-
-        elif name_lower.startswith("together/"):
-            if TOGETHER_KEY:
-                target_url = f"https://api.together.xyz/{path}"
-                fwd_headers["authorization"] = f"Bearer {TOGETHER_KEY}"
     
     # 3. Stickiness fallback
     if not target_url and session_id in session_routes:
@@ -481,7 +539,7 @@ async def proxy(request: Request, path: str):
         target_url = f"http://127.0.0.1:{port}/{path}"
         
     if not target_url:
-        return Response(content="No route available", status_code=503)
+        return openai_error("No route available — no model is running and no cloud provider is configured.", "no_route", 503)
         
     # Save stickiness
     base_url = target_url[:target_url.rfind(f"/{path}")]
@@ -512,10 +570,10 @@ async def proxy(request: Request, path: str):
         )
     except httpx.HTTPStatusError as e:
         sys.stderr.write(f"HTTP error from {target_url}: {e.response.status_code}\\n")
-        return Response(content=f"Upstream HTTP error: {e.response.status_code}", status_code=502)
+        return openai_error(f"Upstream provider returned HTTP {e.response.status_code}", "upstream_error", 502)
     except Exception as e:
         sys.stderr.write(f"Proxy error connecting to {target_url}: {str(e)}\\n")
-        return Response(content=f"Proxy error: {str(e)}", status_code=502)
+        return openai_error(f"Proxy error: {str(e)}", "proxy_error", 502)
 
 if __name__ == "__main__":
     port = int(sys.argv[1])
@@ -547,7 +605,9 @@ if __name__ == "__main__":
         env["GEMINI_KEY"] = settings.geminiKey
         env["GROQ_KEY"] = settings.groqKey
         env["TOGETHER_KEY"] = settings.togetherKey
+        env["FREE_ROUTER_KEY"] = settings.freeRouterKey
         env["FREE_ROUTER_ENABLED"] = settings.freeRouterEnabled ? "true" : "false"
+        env["MODELS_DIR"] = settings.modelsDirectory
         
         p.environment = env
         

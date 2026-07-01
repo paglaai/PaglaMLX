@@ -15,6 +15,8 @@ struct IntegrationTarget: Identifiable {
         case claudeDesktop
         case opencodeStandalone
         case codex
+        case openClaw
+        case agentHermes
         case genericJSON(keyPath: String)
     }
 }
@@ -32,8 +34,8 @@ struct IntegrationTarget: Identifiable {
         IntegrationTarget(name: "Continue.dev", configPath: "~/.continue/config.json", integrationType: .continueDev),
         IntegrationTarget(name: "Claude Code", configPath: "~/.claude.json", integrationType: .claudeCode),
         IntegrationTarget(name: "Claude Desktop", configPath: "~/Library/Application Support/Claude/claude_desktop_config.json", integrationType: .claudeDesktop),
-        IntegrationTarget(name: "Agent Hermes", configPath: "~/.hermes/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
-        IntegrationTarget(name: "OpenClaw", configPath: "~/.openclaw/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
+        IntegrationTarget(name: "Agent Hermes", configPath: "~/.hermes/config.yaml", integrationType: .agentHermes),
+        IntegrationTarget(name: "OpenClaw", configPath: "~/.config/openclaw/openclaw.json5", integrationType: .openClaw),
         IntegrationTarget(name: "Qwen Code", configPath: "~/.qwen/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
         IntegrationTarget(name: "OpenCode (Legacy)", configPath: "~/.opencode/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
         IntegrationTarget(name: "OpenCode (Standalone)", configPath: "~/.config/opencode/opencode.json", integrationType: .opencodeStandalone),
@@ -161,6 +163,42 @@ def apply_opencode():
     }
     data["provider"] = providers
 
+def apply_openclaw():
+    entry = {
+        "models": {
+            "providers": {
+                "lengtamlx": {
+                    "baseUrl": base_url,
+                    "apiKey": api_key,
+                    "api": "openai-completions",
+                    "models": [{
+                        "id": "auto",
+                        "name": "PaglaMLX",
+                        "input": ["text"]
+                    }]
+                }
+            }
+        }
+    }
+    # Merge into existing config
+    prov = data.get("models", {}).get("providers", {})
+    prov["lengtamlx"] = entry["models"]["providers"]["lengtamlx"]
+    data.setdefault("models", {})["providers"] = prov
+
+def apply_hermes():
+    yaml = f\"\"\"model:
+  provider: custom
+  models:
+    - name: PaglaMLX
+      model: auto
+      apiBase: {base_url}
+      apiKey: {api_key}
+\"\"\"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(yaml)
+    print("SUCCESS")
+    sys.exit(0)
+
 def apply_codex():
     toml = f\"\"\"model = "auto"
 model_provider = "lengtamlx"
@@ -186,6 +224,10 @@ elif integration_type == "claudeDesktop":
     apply_claude_desktop()
 elif integration_type == "opencodeStandalone":
     apply_opencode()
+elif integration_type == "openClaw":
+    apply_openclaw()
+elif integration_type == "agentHermes":
+    apply_hermes()
 elif integration_type == "codex":
     apply_codex()
 elif integration_type.startswith("genericJSON"):
@@ -216,6 +258,8 @@ if integration_type != "codex":
         case .claudeCode: typeArg = "claudeCode"
         case .claudeDesktop: typeArg = "claudeDesktop"
         case .opencodeStandalone: typeArg = "opencodeStandalone"
+        case .openClaw: typeArg = "openClaw"
+        case .agentHermes: typeArg = "agentHermes"
         case .codex: typeArg = "codex"
         case .genericJSON(let k): typeArg = "genericJSON:\(k)"
         }
