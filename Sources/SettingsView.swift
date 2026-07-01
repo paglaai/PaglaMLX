@@ -2,12 +2,16 @@ import SwiftUI
 import AppKit
 
 struct SettingsView: View {
-    @EnvironmentObject var settings: SettingsManager
-    @EnvironmentObject var orchestrator: ModelOrchestrator
-    @EnvironmentObject var tunnel: TunnelManager
-    @ObservedObject var integration = IntegrationManager.shared
+    @Environment(SettingsManager.self) var settings
+    @Environment(ModelOrchestrator.self) var orchestrator
+    @Environment(TunnelManager.self) var tunnel
+    @State var integration = IntegrationManager.shared
 
     var body: some View {
+        @Bindable var settings = settings
+        @Bindable var orchestrator = orchestrator
+        @Bindable var tunnel = tunnel
+        @Bindable var integration = integration
         TabView(selection: $settings.lastSettingsTab) {
             
             // MARK: 1. Python
@@ -44,7 +48,8 @@ struct SettingsView: View {
                                 .padding(.leading, 8)
                         } else {
                             Image(systemName: settings.pythonStatus.isValid ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(settings.pythonStatus.isValid ? .green : .red)
+                                .foregroundStyle(settings.pythonStatus.isValid ? .green : .red)
+                                .symbolRenderingMode(.hierarchical)
                                 .padding(.leading, 8)
                             
                             Text(settings.pythonStatus.description)
@@ -65,7 +70,7 @@ struct SettingsView: View {
             Form {
                 Section(header: Text("Generation Parameters").font(.headline)) {
                     HStack {
-                        Picker("Apply Preset", selection: Binding(
+                        Picker("Apply Preset", selection: Binding<UUID?>(
                             get: { settings.presets.first(where: {
                                 $0.temp == settings.temp &&
                                 $0.topP == settings.topP &&
@@ -73,8 +78,9 @@ struct SettingsView: View {
                                 $0.minP == settings.minP &&
                                 $0.maxTokens == settings.maxTokens &&
                                 $0.chatTemplateArgs == settings.chatTemplateArgs
-                            })?.id ?? UUID() }, // UUID() as dummy if none matches
+                            })?.id },
                             set: { id in
+                                guard let id = id else { return }
                                 if let p = settings.presets.first(where: { $0.id == id }) {
                                     settings.temp = p.temp
                                     settings.topP = p.topP
@@ -85,9 +91,9 @@ struct SettingsView: View {
                                 }
                             }
                         )) {
-                            Text("Custom").tag(UUID()) // For when nothing matches exactly
+                            Text("Custom").tag(nil as UUID?)
                             ForEach(settings.presets) { p in
-                                Text(p.name).tag(p.id)
+                                Text(p.name).tag(p.id as UUID?)
                             }
                         }
                         .frame(maxWidth: 250)
@@ -246,17 +252,18 @@ struct SettingsView: View {
             Form {
                 Section(header: Text("Model Persona").font(.headline)) {
                     HStack {
-                        Picker("Select Persona", selection: Binding(
-                            get: { settings.personas.first(where: { $0.systemPrompt == settings.systemPrompt })?.id ?? UUID() },
+                        Picker("Select Persona", selection: Binding<UUID?>(
+                            get: { settings.personas.first(where: { $0.systemPrompt == settings.systemPrompt })?.id },
                             set: { id in
+                                guard let id = id else { return }
                                 if let p = settings.personas.first(where: { $0.id == id }) {
                                     settings.systemPrompt = p.systemPrompt
                                 }
                             }
                         )) {
-                            Text("Custom").tag(UUID())
+                            Text("Custom").tag(nil as UUID?)
                             ForEach(settings.personas) { p in
-                                Text(p.name).tag(p.id)
+                                Text(p.name).tag(p.id as UUID?)
                             }
                         }
                         .frame(maxWidth: 250)

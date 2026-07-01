@@ -1,11 +1,12 @@
 import Foundation
+import Observation
 import Combine
 
 @MainActor
-final class TunnelManager: ObservableObject {
+@Observable final class TunnelManager {
     static let shared = TunnelManager()
     
-    @Published var isEnabled = false {
+    var isEnabled = false {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: "cloudflareTunnelEnabled")
             if isEnabled && RoutingGateway.shared.isRunning {
@@ -15,9 +16,9 @@ final class TunnelManager: ObservableObject {
             }
         }
     }
-    @Published var isRunning = false
-    @Published var publicURL: String?
-    @Published var errorMessage: String?
+    var isRunning = false
+    var publicURL: String?
+    var errorMessage: String?
     
     private var process: Process?
     private var stderrPipe: Pipe?
@@ -52,6 +53,7 @@ final class TunnelManager: ObservableObject {
         
         let stderr = Pipe()
         p.standardError = stderr
+        self.stderrPipe = stderr
         
         stderr.fileHandleForReading.readabilityHandler = { [weak self] h in
             let data = h.availableData
