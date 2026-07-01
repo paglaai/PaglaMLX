@@ -442,8 +442,232 @@ struct SettingsView: View {
             }
             .tag(7)
             
+            // MARK: 9. API Details
+            ApiDetailsTab(host: settings.host, port: settings.port, apiKey: settings.apiKey, allowedOrigins: settings.allowedOrigins, freeRouterEnabled: settings.freeRouterEnabled)
+                .padding(20)
+                .tabItem {
+                    Label("API Details", systemImage: "doc.text.magnifyingglass")
+                }
+                .tag(8)
+            
         }
         .frame(width: 550, height: 420)
+    }
+}
+
+// MARK: - API Details Tab
+
+private struct ApiDetailsTab: View {
+    let host: String
+    let port: Int
+    let apiKey: String
+    let allowedOrigins: String
+    let freeRouterEnabled: Bool
+    
+    @State private var copied: String?
+    
+    private var baseURL: String { "http://\(host):\(port)" }
+    private var apiBase: String { "\(baseURL)/v1" }
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                // 1. Connection Details
+                GroupBox(label: Label("Connection Details", systemImage: "network").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        copyRow("Base URL", apiBase)
+                        copyRow("API Key", apiKey)
+                        copyRow("CORS Origins", allowedOrigins)
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 2. Endpoints
+                GroupBox(label: Label("Available Endpoints", systemImage: "list.bullet").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        endpointRow("POST", "\(apiBase)/chat/completions", "OpenAI Chat")
+                        endpointRow("POST", "\(apiBase)/messages", "Anthropic Messages")
+                        endpointRow("GET",  "\(apiBase)/models", "List loaded models")
+                        endpointRow("GET",  "\(baseURL)/", "Health check")
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 3. curl Examples
+                GroupBox(label: Label("Quick Test (curl)", systemImage: "terminal").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        copyBlock(#"curl \#(baseURL)/"#)
+                        Text("→ {\"status\":\"ok\"}").font(.caption).foregroundColor(.secondary)
+                        
+                        copyBlock(#"curl \#(apiBase)/chat/completions \#(apiKeyHeader)"# + """
+                         \
+                          -H "Content-Type: application/json" \
+                          -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+                        """)
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 4. Provider Configs
+                GroupBox(label: Label("Custom Provider Config", systemImage: "square.and.pencil").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        providerBlock("OpenAI-Compatible Client") {
+                            """
+                            Base URL: \(apiBase)
+                            API Key:  \(apiKey)
+                            Model:    auto
+                            """
+                        }
+                        
+                        providerBlock("VS Code (Copilot)") {
+                            #"""
+                            "github.copilot.advanced.debug.overrideProxyUrl": "\#(baseURL)",
+                            "debug.chatOverrideProxyUrl": "\#(baseURL)"
+                            """#
+                        }
+                        
+                        providerBlock("VS Code (Cline / Kilo)") {
+                            #"""
+                            "cline.apiBase": "\#(apiBase)",
+                            "cline.apiKey": "\#(apiKey)",
+                            "kilo.apiBase": "\#(apiBase)",
+                            "kilo.apiKey": "\#(apiKey)",
+                            "opencode.apiBase": "\#(apiBase)",
+                            "opencode.apiKey": "\#(apiKey)"
+                            """#
+                        }
+                        
+                        providerBlock("Continue.dev") {
+                            #"""
+                            {
+                              "models": [{
+                                "title": "PaglaMLX",
+                                "provider": "openai",
+                                "model": "AUTODETECT",
+                                "apiBase": "\#(apiBase)",
+                                "apiKey": "\#(apiKey)"
+                              }]
+                            }
+                            """#
+                        }
+                        
+                        providerBlock("Claude Desktop") {
+                            #"""
+                            "env": {
+                              "ANTHROPIC_BASE_URL": "\#(baseURL)",
+                              "ANTHROPIC_API_KEY": "\#(apiKey)"
+                            }
+                            """#
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 5. Routing Table
+                GroupBox(label: Label("Routing Table", systemImage: "arrow.triangle.branch").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        routeRow("auto", "Best local model (Auto-Router)")
+                        routeRow("gpt-* / o1 / o3", "OpenAI API")
+                        routeRow("claude-*", "Anthropic API")
+                        routeRow("gemini-*", "Gemini API")
+                        routeRow("openrouter/*", "OpenRouter")
+                        routeRow("groq/*", "Groq")
+                        routeRow("together/*", "Together AI")
+                        routeRow("free", freeRouterEnabled ? "OpenRouter (Free Router)" : "Disabled (toggle in Cloud tab)")
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 6. Troubleshooting
+                GroupBox(label: Label("Troubleshooting", systemImage: "wrench").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        tipRow("Connection refused", "Gateway is not running. Press Play on a model first.")
+                        tipRow("401 Unauthorized", "Wrong API key. Check Settings → Network.")
+                        tipRow("503 Not found", "Model name not recognised. Use \"auto\".")
+                        tipRow("CORS error", "Set CORS Origins to \"*\" in Settings → Network.")
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private var apiKeyHeader: String {
+        apiKey.isEmpty ? "" : #"-H "Authorization: Bearer \#(apiKey)""#
+    }
+    
+    private func copyRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label + ":").font(.caption).foregroundColor(.secondary).frame(width: 80, alignment: .trailing)
+            Text(value).font(.system(.caption, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+            Spacer()
+            copyButton(value)
+        }
+    }
+    
+    private func endpointRow(_ method: String, _ url: String, _ desc: String) -> some View {
+        HStack {
+            Text(method).font(.system(.caption2, design: .monospaced)).foregroundColor(method == "GET" ? .green : .orange).frame(width: 38)
+            Text(url).font(.system(.caption, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+            Spacer()
+            Text(desc).font(.caption2).foregroundColor(.secondary)
+            copyButton(url)
+        }
+    }
+    
+    private func copyBlock(_ text: String) -> some View {
+        HStack(alignment: .top) {
+            Text(text).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                .padding(8)
+                .background(Color(.textBackgroundColor))
+                .cornerRadius(6)
+            copyButton(text)
+        }
+    }
+    
+    private func providerBlock(_ name: String, content: () -> String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(name).font(.caption).bold()
+            HStack(alignment: .top) {
+                Text(content()).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
+                    .padding(8)
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(6)
+                copyButton(content())
+            }
+        }
+    }
+    
+    private func routeRow(_ prefix: String, _ dest: String) -> some View {
+        HStack {
+            Text(prefix).font(.system(.caption, design: .monospaced)).frame(width: 100, alignment: .leading)
+            Text("→").font(.caption).foregroundColor(.secondary)
+            Text(dest).font(.caption).foregroundColor(.secondary)
+        }
+    }
+    
+    private func tipRow(_ issue: String, _ fix: String) -> some View {
+        HStack(alignment: .top) {
+            Text(issue + ":").font(.caption).bold().frame(width: 130, alignment: .trailing)
+            Text(fix).font(.caption).foregroundColor(.secondary)
+        }
+    }
+    
+    private func copyButton(_ text: String) -> some View {
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            copied = text
+            Task { try? await Task.sleep(for: .seconds(1.5)); copied = nil }
+        } label: {
+            Image(systemName: copied == text ? "checkmark" : "doc.on.doc")
+                .foregroundColor(copied == text ? .green : .secondary)
+                .font(.caption)
+        }
+        .buttonStyle(.plain)
+        .help("Copy")
     }
 }
 
