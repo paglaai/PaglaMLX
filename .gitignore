@@ -9,3 +9,7 @@ DerivedData/
 PaglaMLX/
 __pycache__/
 *.pyc
+docs/build/
+docs/node_modules/
+docs/.docusaurus/
+docs/.cache/
