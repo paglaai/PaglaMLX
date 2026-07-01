@@ -5,29 +5,22 @@ import AppKit
 
 @main
 struct PaglaMLXApp: App {
-    @StateObject private var orchestrator = ModelOrchestrator.shared
-    @StateObject private var settings = SettingsManager.shared
-    @StateObject private var gateway = RoutingGateway.shared
-    @StateObject private var proxy = AnthropicProxy.shared
-    @StateObject private var remote = RemoteAccessManager.shared
-    @StateObject private var tunnel = TunnelManager.shared
+    @State private var orchestrator = ModelOrchestrator.shared
+    @State private var settings = SettingsManager.shared
+    @State private var gateway = RoutingGateway.shared
+    @State private var proxy = AnthropicProxy.shared
+    @State private var remote = RemoteAccessManager.shared
+    @State private var tunnel = TunnelManager.shared
 
     var body: some Scene {
         // MARK: Main Window
         WindowGroup(id: "main") {
-            ContentView()
-                .environmentObject(orchestrator)
-                .environmentObject(settings)
-                .environmentObject(remote)
-                .environmentObject(tunnel)
+            AppLaunchView()
+                .environment(orchestrator)
+                .environment(settings)
+                .environment(remote)
+                .environment(tunnel)
                 .frame(minWidth: 720, minHeight: 520)
-                .onAppear {
-                    applyActivationPolicy()
-                    orchestrator.detectPython()
-                    orchestrator.scanModels()
-                    // Re-detect Tailscale on launch
-                    remote.refreshIPs()
-                }
                 .onChange(of: settings.hideDockIcon)     { _, _ in applyActivationPolicy() }
                 .onChange(of: settings.menuBarMode)      { _, _ in applyActivationPolicy() }
                 .onChange(of: settings.modelsDirectory)  { _, _ in orchestrator.scanModels() }
@@ -61,9 +54,9 @@ struct PaglaMLXApp: App {
         // MARK: Menu Bar Extra (HIG: .window style for custom UI)
         MenuBarExtra {
             MenuBarView()
-                .environmentObject(orchestrator)
-                .environmentObject(settings)
-                .environmentObject(remote)
+                .environment(orchestrator)
+                .environment(settings)
+                .environment(remote)
         } label: {
             Image(systemName: !orchestrator.instances.filter({ $0.value.isRunning }).isEmpty ? "cpu.fill" : "cpu")
         }
@@ -72,9 +65,9 @@ struct PaglaMLXApp: App {
         // MARK: Settings Window (⌘,  — handled automatically by SwiftUI)
         Settings {
             SettingsView()
-                .environmentObject(orchestrator)
-                .environmentObject(settings)
-                .environmentObject(tunnel)
+                .environment(orchestrator)
+                .environment(settings)
+                .environment(tunnel)
         }
     }
 
