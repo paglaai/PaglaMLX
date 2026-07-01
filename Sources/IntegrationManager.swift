@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Combine
 
 struct IntegrationTarget: Identifiable {
@@ -11,28 +12,35 @@ struct IntegrationTarget: Identifiable {
         case vsCodeSettings
         case continueDev
         case claudeCode
+        case claudeDesktop
+        case opencodeStandalone
+        case codex
         case genericJSON(keyPath: String)
     }
 }
 
 @MainActor
-final class IntegrationManager: ObservableObject {
+@Observable final class IntegrationManager {
     static let shared = IntegrationManager()
     
-    @Published var targets: [IntegrationTarget] = [
+    var targets: [IntegrationTarget] = [
         IntegrationTarget(name: "VS Code Co-Pilot", configPath: "~/Library/Application Support/Code/User/settings.json", integrationType: .vsCodeSettings),
         IntegrationTarget(name: "VS Code / Kilo Code", configPath: "~/Library/Application Support/Code/User/settings.json", integrationType: .vsCodeSettings),
         IntegrationTarget(name: "VS Code / OpenCode", configPath: "~/Library/Application Support/Code/User/settings.json", integrationType: .vsCodeSettings),
         IntegrationTarget(name: "Cline Code", configPath: "~/Library/Application Support/Code/User/settings.json", integrationType: .vsCodeSettings),
+        IntegrationTarget(name: "Claude Code (VS Code)", configPath: "~/Library/Application Support/Code/User/settings.json", integrationType: .vsCodeSettings),
         IntegrationTarget(name: "Continue.dev", configPath: "~/.continue/config.json", integrationType: .continueDev),
         IntegrationTarget(name: "Claude Code", configPath: "~/.claude.json", integrationType: .claudeCode),
+        IntegrationTarget(name: "Claude Desktop", configPath: "~/Library/Application Support/Claude/claude_desktop_config.json", integrationType: .claudeDesktop),
         IntegrationTarget(name: "Agent Hermes", configPath: "~/.hermes/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
         IntegrationTarget(name: "OpenClaw", configPath: "~/.openclaw/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
         IntegrationTarget(name: "Qwen Code", configPath: "~/.qwen/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
-        IntegrationTarget(name: "OpenCode (Standalone)", configPath: "~/.opencode/config.json", integrationType: .genericJSON(keyPath: "apiBase"))
+        IntegrationTarget(name: "OpenCode (Legacy)", configPath: "~/.opencode/config.json", integrationType: .genericJSON(keyPath: "apiBase")),
+        IntegrationTarget(name: "OpenCode (Standalone)", configPath: "~/.config/opencode/opencode.json", integrationType: .opencodeStandalone),
+        IntegrationTarget(name: "Codex CLI", configPath: "~/.codex/config.toml", integrationType: .codex)
     ]
     
-    @Published var statuses: [UUID: String] = [:]
+    var statuses: [UUID: String] = [:]
     
     private init() {}
     
@@ -94,6 +102,9 @@ def apply_vscode():
     
     data["cline.apiBase"] = base_url
     data["cline.apiKey"] = api_key
+    
+    data["claude-code.apiBase"] = base_url
+    data["claude-code.apiKey"] = api_key
 
 def apply_continue():
     models = data.get("models", [])
@@ -127,23 +138,69 @@ def apply_generic(key_path):
     data[key_path] = base_url
     data["apiKey"] = api_key
 
+def apply_claude_desktop():
+    env = data.get("env", {})
+    env["ANTHROPIC_BASE_URL"] = base_url
+    env["ANTHROPIC_API_KEY"] = api_key
+    data["env"] = env
+
+def apply_opencode():
+    providers = data.get("provider", {})
+    providers["lengtamlx"] = {
+        "name": "PaglaMLX",
+        "npm": "@ai-sdk/openai-compatible",
+        "options": {
+            "baseURL": base_url,
+            "apiKey": api_key
+        },
+        "models": {
+            "default": {
+                "name": "Local Model"
+            }
+        }
+    }
+    data["provider"] = providers
+
+def apply_codex():
+    toml = f\"\"\"model = "auto"
+model_provider = "lengtamlx"
+
+[model_providers.lengtamlx]
+name = "PaglaMLX"
+base_url = "{base_url}"
+env_key = "OPENAI_API_KEY"
+wire_api = "responses"
+\"\"\"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(toml)
+    print("SUCCESS")
+    sys.exit(0)
+
 if integration_type == "vsCodeSettings":
     apply_vscode()
 elif integration_type == "continueDev":
     apply_continue()
 elif integration_type == "claudeCode":
     apply_claude()
+elif integration_type == "claudeDesktop":
+    apply_claude_desktop()
+elif integration_type == "opencodeStandalone":
+    apply_opencode()
+elif integration_type == "codex":
+    apply_codex()
 elif integration_type.startswith("genericJSON"):
     key = integration_type.split(":")[1]
     apply_generic(key)
 
-try:
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4)
-    print("SUCCESS")
-except Exception as e:
-    print(f"Error saving: {e}")
-    sys.exit(1)
+# Codex writes TOML directly and exits in apply_codex()
+if integration_type != "codex":
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        print("SUCCESS")
+    except Exception as e:
+        print(f"Error saving: {e}")
+        sys.exit(1)
 """
         let fm = FileManager.default
         let lengtaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".lengtamlx")
@@ -157,6 +214,9 @@ except Exception as e:
         case .vsCodeSettings: typeArg = "vsCodeSettings"
         case .continueDev: typeArg = "continueDev"
         case .claudeCode: typeArg = "claudeCode"
+        case .claudeDesktop: typeArg = "claudeDesktop"
+        case .opencodeStandalone: typeArg = "opencodeStandalone"
+        case .codex: typeArg = "codex"
         case .genericJSON(let k): typeArg = "genericJSON:\(k)"
         }
         

@@ -1,12 +1,13 @@
 import Foundation
+import Observation
 import Combine
 
 @MainActor
-final class RemoteAccessManager: ObservableObject {
+@Observable final class RemoteAccessManager {
     static let shared = RemoteAccessManager()
     
-    @Published var tailscaleIP: String?
-    @Published var localIP: String?
+    var tailscaleIP: String?
+    var localIP: String?
     
     private init() {
         refreshIPs()

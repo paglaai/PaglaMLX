@@ -38,6 +38,8 @@ OR_KEY = os.environ.get("OPENROUTER_KEY", "")
 ANT_KEY = os.environ.get("ANTHROPIC_KEY", "")
 OAI_KEY = os.environ.get("OPENAI_KEY", "")
 GEM_KEY = os.environ.get("GEMINI_KEY", "")
+GROQ_KEY = os.environ.get("GROQ_KEY", "")
+TOGETHER_KEY = os.environ.get("TOGETHER_KEY", "")
 FREE_ROUTER = os.environ.get("FREE_ROUTER_ENABLED", "false").lower() == "true"
 
 ROUTING_FILE = os.path.expanduser("~/.lengtamlx/routes.json")
@@ -450,6 +452,16 @@ async def proxy(request: Request, path: str):
             target_url = f"https://openrouter.ai/api/{path}"
             if OR_KEY:
                 fwd_headers["authorization"] = f"Bearer {OR_KEY}"
+
+        elif name_lower.startswith("groq/"):
+            if GROQ_KEY:
+                target_url = f"https://api.groq.com/openai/{path}"
+                fwd_headers["authorization"] = f"Bearer {GROQ_KEY}"
+
+        elif name_lower.startswith("together/"):
+            if TOGETHER_KEY:
+                target_url = f"https://api.together.xyz/{path}"
+                fwd_headers["authorization"] = f"Bearer {TOGETHER_KEY}"
     
     # 3. Stickiness fallback
     if not target_url and session_id in session_routes:
@@ -533,6 +545,8 @@ if __name__ == "__main__":
         env["ANTHROPIC_KEY"] = settings.anthropicKey
         env["OPENAI_KEY"] = settings.openaiKey
         env["GEMINI_KEY"] = settings.geminiKey
+        env["GROQ_KEY"] = settings.groqKey
+        env["TOGETHER_KEY"] = settings.togetherKey
         env["FREE_ROUTER_ENABLED"] = settings.freeRouterEnabled ? "true" : "false"
         
         p.environment = env

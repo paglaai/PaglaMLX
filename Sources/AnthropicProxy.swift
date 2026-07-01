@@ -1,15 +1,16 @@
 import Foundation
+import Observation
 import AppKit
 
 /// Manages a FastAPI Python script that acts as a translation proxy,
 /// converting Anthropic Messages API requests to OpenAI Chat Completions,
 /// and translating the SSE stream back to Anthropic's format.
 @MainActor
-final class AnthropicProxy: ObservableObject {
+@Observable final class AnthropicProxy {
     static let shared = AnthropicProxy()
     
-    @Published var isRunning = false
-    @Published var port: Int
+    var isRunning = false
+    var port: Int
     
     private var process: Process?
     

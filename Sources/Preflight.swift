@@ -20,26 +20,34 @@ struct PreflightResult: Equatable {
     func run() async -> PreflightResult
 }
 
-// MARK: - 1. External Storage
+// MARK: - 1. Model Storage
 
 @MainActor
 struct ExternalStorageCheck: PreflightCheck {
-    let name = "External Storage"
+    let name = "Model Storage"
 
     func run() async -> PreflightResult {
-        let volume = "/Volumes/CastingC0UCH"
-        var isDir: ObjCBool = false
-        let exists = FileManager.default.fileExists(atPath: volume, isDirectory: &isDir)
+        let dir = SettingsManager.shared.modelsDirectory
 
-        if exists && isDir.boolValue {
+        guard dir.hasPrefix("/Volumes/") else {
             return .init(check: name, status: .pass,
-                         message: "CastingC0UCH is mounted at \(volume)",
+                         message: "Models directory is on local storage",
                          suggestion: nil)
         }
 
+        var isDir: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: dir, isDirectory: &isDir)
+
+        if exists && isDir.boolValue {
+            return .init(check: name, status: .pass,
+                         message: "External volume is mounted",
+                         suggestion: nil)
+        }
+
+        let volumeName = dir.dropFirst("/Volumes/".count).split(separator: "/").first ?? "external drive"
         return .init(check: name, status: .fail,
-                     message: "External drive not mounted at \(volume)",
-                     suggestion: "Connect the external SSD labelled CastingC0UCH and ensure it mounts to /Volumes/CastingC0UCH.")
+                     message: "External volume not mounted at \(dir)",
+                     suggestion: "Connect the external drive '\(volumeName)' and ensure it mounts to /Volumes/\(volumeName).")
     }
 }
 

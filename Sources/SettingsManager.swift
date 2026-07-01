@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftUI
 
 // MARK: - SettingsManager
@@ -6,7 +7,7 @@ import SwiftUI
 /// Singleton ObservableObject that persists all user preferences to UserDefaults.
 /// Access via `SettingsManager.shared` everywhere; pass as @EnvironmentObject for view binding.
 @MainActor
-final class SettingsManager: ObservableObject {
+@Observable final class SettingsManager {
 
     static let shared = SettingsManager()
     private let defaults = UserDefaults.standard
@@ -32,88 +33,94 @@ final class SettingsManager: ObservableObject {
 
     // MARK: Python
 
-    @Published var pythonPath: String {
+    var pythonPath: String {
         didSet { defaults.set(pythonPath, forKey: K.pythonPath) }
     }
-    @Published var pythonStatus: PythonStatus = .unchecked
+    var pythonStatus: PythonStatus = .unchecked
 
     // MARK: Server Defaults
 
-    @Published var temp: Double {
+    var temp: Double {
         didSet { defaults.set(temp, forKey: K.temp) }
     }
-    @Published var topP: Double {
+    var topP: Double {
         didSet { defaults.set(topP, forKey: K.topP) }
     }
-    @Published var topK: Int {
+    var topK: Int {
         didSet { defaults.set(topK, forKey: K.topK) }
     }
-    @Published var minP: Double {
+    var minP: Double {
         didSet { defaults.set(minP, forKey: K.minP) }
     }
-    @Published var maxTokens: Int {
+    var maxTokens: Int {
         didSet { defaults.set(maxTokens, forKey: K.maxTokens) }
     }
-    @Published var logLevel: LogLevel {
+    var logLevel: LogLevel {
         didSet { defaults.set(logLevel.rawValue, forKey: K.logLevel) }
     }
-    @Published var trustRemoteCode: Bool {
+    var trustRemoteCode: Bool {
         didSet { defaults.set(trustRemoteCode, forKey: K.trustRemoteCode) }
     }
 
     // MARK: Network
 
     /// Comma-separated allowed origins for CORS, or "*" for any (--allowed-origins)
-    @Published var allowedOrigins: String {
+    var allowedOrigins: String {
         didSet { defaults.set(allowedOrigins, forKey: K.allowedOrigins) }
     }
     /// Bind host for the HTTP server (--host)
-    @Published var host: String {
+    var host: String {
         didSet { defaults.set(host, forKey: K.host) }
     }
-    @Published var apiKey: String {
+    var apiKey: String {
         didSet { defaults.set(apiKey, forKey: K.apiKey) }
     }
 
     // MARK: BYOK & Cloud
 
-    @Published var openrouterKey: String {
+    var openrouterKey: String {
         didSet { defaults.set(openrouterKey, forKey: K.openrouterKey) }
     }
-    @Published var anthropicKey: String {
+    var anthropicKey: String {
         didSet { defaults.set(anthropicKey, forKey: K.anthropicKey) }
     }
-    @Published var openaiKey: String {
+    var openaiKey: String {
         didSet { defaults.set(openaiKey, forKey: K.openaiKey) }
     }
-    @Published var geminiKey: String {
+    var geminiKey: String {
         didSet { defaults.set(geminiKey, forKey: K.geminiKey) }
     }
-    @Published var freeRouterEnabled: Bool {
+    var groqKey: String {
+        didSet { defaults.set(groqKey, forKey: K.groqKey) }
+    }
+    var togetherKey: String {
+        didSet { defaults.set(togetherKey, forKey: K.togetherKey) }
+    }
+    var freeRouterEnabled: Bool {
         didSet { defaults.set(freeRouterEnabled, forKey: K.freeRouterEnabled) }
     }
 
     // MARK: KV Cache
 
     /// Maximum number of in-memory KV cache slots (--prompt-cache-size, 0 = default)
-    @Published var promptCacheSize: Int {
+    var promptCacheSize: Int {
         didSet { defaults.set(promptCacheSize, forKey: K.promptCacheSize) }
     }
     /// Maximum KV cache size in bytes (--prompt-cache-bytes, 0 = unlimited)
-    @Published var promptCacheBytes: Int {
+    var promptCacheBytes: Int {
         didSet { defaults.set(promptCacheBytes, forKey: K.promptCacheBytes) }
     }
 
     // MARK: System Prompt
 
-    @Published var systemPrompt: String {
+    var systemPrompt: String {
         didSet { defaults.set(systemPrompt, forKey: K.systemPrompt) }
     }
-    @Published var chatTemplateArgs: String {
+    var chatTemplateArgs: String {
         didSet { defaults.set(chatTemplateArgs, forKey: K.chatTemplateArgs) }
     }
     
-    @Published var personas: [Persona] {
+    var personas: [Persona] {
         didSet {
             if let data = try? JSONEncoder().encode(personas) {
                 defaults.set(data, forKey: K.personas)
@@ -121,7 +128,7 @@ final class SettingsManager: ObservableObject {
         }
     }
     
-    @Published var presets: [Preset] {
+    var presets: [Preset] {
         didSet {
             if let data = try? JSONEncoder().encode(presets) {
                 defaults.set(data, forKey: K.presets)
@@ -131,30 +138,29 @@ final class SettingsManager: ObservableObject {
 
     // MARK: App Behaviour
 
-    @Published var port: Int {
+    var port: Int {
         didSet { defaults.set(port, forKey: K.port) }
     }
-    @Published var modelsDirectory: String {
+    var modelsDirectory: String {
         didSet { defaults.set(modelsDirectory, forKey: K.modelsDirectory) }
     }
-    @Published var menuBarMode: Bool {
+    var menuBarMode: Bool {
         didSet {
             defaults.set(menuBarMode, forKey: K.menuBarMode)
             // If menu bar mode turns off, also disable hide-dock-icon
             if !menuBarMode { hideDockIcon = false }
         }
     }
-    @Published var hideDockIcon: Bool {
+    var hideDockIcon: Bool {
         didSet { defaults.set(hideDockIcon, forKey: K.hideDockIcon) }
     }
-    @Published var lastSettingsTab: Int {
+    var lastSettingsTab: Int {
         didSet { defaults.set(lastSettingsTab, forKey: K.lastSettingsTab) }
     }
 
     // MARK: Init
 
-    static let defaultModelsDir =
-        "/Users/aynaghor/KH3L4-GH0R/APPH0LE/CastingC0UCH/M0DEL/MLX"
+    static let defaultModelsDir = NSHomeDirectory() + "/Models/mlx"
 
     private init() {
         let d = UserDefaults.standard
@@ -192,6 +198,8 @@ final class SettingsManager: ObservableObject {
         anthropicKey      = d.string(forKey: K.anthropicKey) ?? ""
         openaiKey         = d.string(forKey: K.openaiKey) ?? ""
         geminiKey         = d.string(forKey: K.geminiKey) ?? ""
+        groqKey           = d.string(forKey: K.groqKey) ?? ""
+        togetherKey       = d.string(forKey: K.togetherKey) ?? ""
         freeRouterEnabled = d.bool(forKey: K.freeRouterEnabled)
         
         if let data = d.data(forKey: K.personas), let p = try? JSONDecoder().decode([Persona].self, from: data) {
@@ -267,6 +275,8 @@ final class SettingsManager: ObservableObject {
         static let anthropicKey     = "anthropicKey"
         static let openaiKey        = "openaiKey"
         static let geminiKey        = "geminiKey"
+        static let groqKey           = "groqKey"
+        static let togetherKey       = "togetherKey"
         static let freeRouterEnabled = "freeRouterEnabled"
         static let personas         = "personas"
         static let presets          = "presets"

@@ -3,6 +3,7 @@ import CoreImage.CIFilterBuiltins
 
 struct QRCodeView: View {
     let url: String
+    @State private var copiedCommand: String?
     
     private let context = CIContext()
     private let filter = CIFilter.qrCodeGenerator()
@@ -33,18 +34,18 @@ struct QRCodeView: View {
                     .font(.headline)
                 
                 HStack {
-                    Text("export OPENAI_BASE_URL=\(url)/v1")
+                    let exportCommand = "export OPENAI_BASE_URL=\(url)/v1"
+                    Text(exportCommand)
                         .font(.system(.subheadline, design: .monospaced))
                         .padding(8)
                         .background(Color.secondary.opacity(0.1))
                         .cornerRadius(6)
                     
-                    Button(action: {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("export OPENAI_BASE_URL=\(url)/v1", forType: .string)
-                    }) {
-                        Image(systemName: "doc.on.doc")
+                    Button(action: { copy(exportCommand) }) {
+                        Image(systemName: copiedCommand == exportCommand ? "checkmark" : "doc.on.doc")
                     }
+                    .accessibilityLabel("Copy environment variable command")
+                    .help(copiedCommand == exportCommand ? "Copied" : "Copy command")
                     .buttonStyle(.plain)
                 }
                 
@@ -53,18 +54,18 @@ struct QRCodeView: View {
                     .padding(.top, 4)
                 
                 HStack {
-                    Text("curl \(url)/v1/models")
+                    let healthCheckCommand = "curl \(url)/v1/models"
+                    Text(healthCheckCommand)
                         .font(.system(.subheadline, design: .monospaced))
                         .padding(8)
                         .background(Color.secondary.opacity(0.1))
                         .cornerRadius(6)
                     
-                    Button(action: {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("curl \(url)/v1/models", forType: .string)
-                    }) {
-                        Image(systemName: "doc.on.doc")
+                    Button(action: { copy(healthCheckCommand) }) {
+                        Image(systemName: copiedCommand == healthCheckCommand ? "checkmark" : "doc.on.doc")
                     }
+                    .accessibilityLabel("Copy health check command")
+                    .help(copiedCommand == healthCheckCommand ? "Copied" : "Copy command")
                     .buttonStyle(.plain)
                 }
             }
@@ -74,6 +75,18 @@ struct QRCodeView: View {
         }
         .padding(30)
         .frame(width: 450)
+    }
+    
+    private func copy(_ command: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+        copiedCommand = command
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            if copiedCommand == command {
+                copiedCommand = nil
+            }
+        }
     }
     
     private func generateQRCode(from string: String) -> NSImage? {

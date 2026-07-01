@@ -323,40 +323,81 @@ struct SettingsView: View {
             
             // MARK: 7. Cloud / BYOK
             Form {
-                Section(header: Text("Cloud Proxy & Auto-Router").font(.headline)) {
-                    Toggle("Enable Free Router / Cloud Routing", isOn: $settings.freeRouterEnabled)
-                    Text("Routes unrecognized models to external APIs or OpenRouter free endpoints.")
-                        .font(.caption).foregroundColor(.secondary)
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: $settings.freeRouterEnabled) {
+                            Text("Free Router")
+                                .font(.custom("Lucida Grande", size: 13))
+                        }
+                        .tint(Color(hex: "#3366cc"))
+
+                        Text("When enabled, \"model=auto\" routes to the best local model via heuristics; \"model=free\" or unknown model prefixes route through external APIs using your keys below.")
+                            .font(.custom("Lucida Grande", size: 13))
+                            .foregroundColor(Color(hex: "#a0a0a0"))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } header: {
+                    Text("Cloud Proxy & Auto-Router")
+                        .font(.custom("Lucida Grande", size: 14.95))
                 }
-                
-                Divider().padding(.vertical)
-                
-                Section(header: Text("Bring Your Own Keys").font(.headline)) {
-                    HStack {
-                        Text("OpenRouter:")
-                        SecureField("sk-or-...", text: $settings.openrouterKey)
-                            .textFieldStyle(.roundedBorder)
+
+                Section {
+                    VStack(spacing: 1) {
+                        ProviderRow(label: "OpenAI",     placeholder: "sk-proj-...", key: $settings.openaiKey)
+                        divider
+                        ProviderRow(label: "Anthropic",  placeholder: "sk-ant-...",  key: $settings.anthropicKey)
+                        divider
+                        ProviderRow(label: "Gemini",     placeholder: "AIza...",     key: $settings.geminiKey)
                     }
-                    
-                    HStack {
-                        Text("Anthropic:")
-                        SecureField("sk-ant-...", text: $settings.anthropicKey)
-                            .textFieldStyle(.roundedBorder)
+                    .padding(.vertical, 4)
+
+                    Text("Prefix your model name with \"gpt-\", \"claude-\", or \"gemini-\" to route directly.")
+                        .font(.custom("Lucida Grande", size: 13))
+                        .foregroundColor(Color(hex: "#a0a0a0"))
+                } header: {
+                    Text("Direct API Keys")
+                        .font(.custom("Lucida Grande", size: 14.95))
+                }
+
+                Section {
+                    VStack(spacing: 1) {
+                        ProviderRow(label: "OpenRouter",   placeholder: "sk-or-...", key: $settings.openrouterKey)
+                        divider
+                        ProviderRow(label: "Groq",         placeholder: "gsk_...",   key: $settings.groqKey)
+                        divider
+                        ProviderRow(label: "Together AI",  placeholder: "...",       key: $settings.togetherKey)
                     }
-                    
-                    HStack {
-                        Text("OpenAI:")
-                        SecureField("sk-proj-...", text: $settings.openaiKey)
-                            .textFieldStyle(.roundedBorder)
+                    .padding(.vertical, 4)
+
+                    Text("Prefix with \"openrouter/\", \"groq/\", or \"together/\" to route. Free Router toggle also enables OpenRouter fallback for unrecognized models.")
+                        .font(.custom("Lucida Grande", size: 13))
+                        .foregroundColor(Color(hex: "#a0a0a0"))
+                } header: {
+                    Text("Free / Community API Keys")
+                        .font(.custom("Lucida Grande", size: 14.95))
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 10) {
+                            keyDot(true)
+                            Text("Key set").font(.custom("Lucida Grande", size: 13))
+                            keyDot(false)
+                            Text("Key empty").font(.custom("Lucida Grande", size: 13))
+                        }
+                        .foregroundColor(Color(hex: "#a0a0a0"))
+
+                        Text("Auto-Router routes model=\"auto\" via: multimodal → long context → keyword intent (code / math) → default fallback.")
+                            .font(.custom("Lucida Grande", size: 13))
+                            .foregroundColor(Color(hex: "#a0a0a0"))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    
-                    HStack {
-                        Text("Gemini:")
-                        SecureField("AIza...", text: $settings.geminiKey)
-                            .textFieldStyle(.roundedBorder)
-                    }
+                } header: {
+                    Text("Routing Behaviour")
+                        .font(.custom("Lucida Grande", size: 14.95))
                 }
             }
+            .font(.custom("Lucida Grande", size: 13))
             .padding(20)
             .tabItem {
                 Label("Cloud", systemImage: "cloud.fill")
@@ -384,8 +425,7 @@ struct SettingsView: View {
                             }
                             
                             Button("Apply") {
-                                // Decide port (Anthropic uses 2526 usually if Gateway is 2525, but let's just use Settings port)
-                                let port = target.name == "Claude Code" ? settings.port + 1 : settings.port
+                                let port = settings.port
                                 integration.applyIntegration(for: target, port: port, apiKey: settings.apiKey)
                             }
                             .buttonStyle(.bordered)
@@ -404,5 +444,74 @@ struct SettingsView: View {
             
         }
         .frame(width: 550, height: 420)
+    }
+}
+
+// MARK: - Design System Helpers
+
+private struct ProviderRow: View {
+    let label: String
+    let placeholder: String
+    @Binding var key: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            keyDot(!key.isEmpty)
+                .frame(width: 6)
+
+            Text(label + ":")
+                .font(.custom("Lucida Grande", size: 13))
+                .foregroundColor(Color(hex: "#000000"))
+                .frame(width: 82, alignment: .trailing)
+
+            SecureField(placeholder, text: $key)
+                .font(.custom("Lucida Grande", size: 13))
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color(hex: "#ffffff"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color(hex: "#ebeef1"), lineWidth: 1)
+                )
+        }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 3)
+    }
+}
+
+private var divider: some View {
+    Divider().overlay(Color(hex: "#ebeef1"))
+}
+
+private func keyDot(_ filled: Bool) -> some View {
+    Circle()
+        .fill(filled ? Color(hex: "#3366cc") : Color(hex: "#ebeef1"))
+        .frame(width: 6, height: 6)
+}
+
+// MARK: - Color Extension
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 6:
+            (a, r, g, b) = (255, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
+        case 8:
+            (a, r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
     }
 }

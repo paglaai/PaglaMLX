@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftUI
 import AppKit
 
@@ -6,13 +7,16 @@ import AppKit
 
 /// Represents a single running instance of mlx_lm.server
 @MainActor
-final class ModelInstance: ObservableObject, Identifiable {
+@Observable final class ModelInstance: Identifiable {
     let id = UUID()
     let model: MLXModel
     let port: Int
     
-    @Published var isRunning = false
-    @Published var logs: [LogEntry] = []
+    var isRunning = false
+    var logs: [LogEntry] = []
+    
+    /// Callback fired when this instance terminates (used by orchestrator to update gateway).
+    var onTermination: (() -> Void)?
     
     private var process: Process?
     private var stdoutPipe: Pipe?
@@ -72,6 +76,7 @@ final class ModelInstance: ObservableObject, Identifiable {
                 let ok = proc.terminationStatus == 0
                 self?.append("Server exited (code \(proc.terminationStatus))",
                              level: ok ? .info : .error)
+                self?.onTermination?()
             }
         }
         
@@ -129,13 +134,13 @@ final class ModelInstance: ObservableObject, Identifiable {
 // MARK: - ModelOrchestrator
 
 @MainActor
-final class ModelOrchestrator: ObservableObject {
+@Observable final class ModelOrchestrator {
     static let shared = ModelOrchestrator()
     
-    @Published var models: [MLXModel] = []
-    @Published var selectedModel: MLXModel?
-    @Published var instances: [String: ModelInstance] = [:] // Keyed by model.name
-    @Published var errorMessage: String?
+    var models: [MLXModel] = []
+    var selectedModel: MLXModel?
+    var instances: [String: ModelInstance] = [:] // Keyed by model.name
+    var errorMessage: String?
     
     private var nextPort = 8000
     
@@ -188,16 +193,13 @@ final class ModelOrchestrator: ObservableObject {
         
         updateGateway()
         
-        // Notify observers when child instance state changes
-        newInstance.objectWillChange.sink { [weak self] in
-            self?.objectWillChange.send()
+        // Update gateway routing when this instance terminates
+        newInstance.onTermination = { [weak self] in
             self?.updateGateway()
-        }.store(in: &cancellables)
+        }
         
         return newInstance
     }
-    
-    private var cancellables = Set<AnyCancellable>()
     
     func stop(model: MLXModel) {
         instances[model.name]?.stop()
@@ -246,7 +248,6 @@ final class ModelOrchestrator: ObservableObject {
     func clearLogs() {
         guard let sel = selectedModel else { return }
         instances[sel.name]?.clearLogs()
-        objectWillChange.send()
     }
     
     // MARK: - Scanning & Python (migrated from ServerManager)
@@ -342,4 +343,3 @@ final class ModelOrchestrator: ObservableObject {
     }
 }
 
-import Combine

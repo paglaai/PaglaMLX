@@ -1,12 +1,15 @@
 import SwiftUI
 
 struct MenuBarView: View {
-    @EnvironmentObject var orchestrator: ModelOrchestrator
-    @EnvironmentObject var settings: SettingsManager
-    @EnvironmentObject var remoteAccess: RemoteAccessManager
+    @Environment(ModelOrchestrator.self) var orchestrator
+    @Environment(SettingsManager.self) var settings
+    @Environment(RemoteAccessManager.self) var remoteAccess
     @Environment(\.openWindow) var openWindow
     
     var body: some View {
+        @Bindable var orchestrator = orchestrator
+        @Bindable var settings = settings
+        @Bindable var remoteAccess = remoteAccess
         VStack(alignment: .leading, spacing: 0) {
             
             // MARK: Header
@@ -47,11 +50,8 @@ struct MenuBarView: View {
                 
                 // Server Toggle
                 Button(action: { orchestrator.toggleSelected() }) {
-                    HStack {
-                        Image(systemName: isSelRunning ? "stop.fill" : "play.fill")
-                        Text(isSelRunning ? "Stop Server" : "Start Server")
-                            .frame(maxWidth: .infinity)
-                    }
+                    Label(isSelRunning ? "Stop Server" : "Start Server", systemImage: isSelRunning ? "stop.fill" : "play.fill")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(isSelRunning ? .red : .blue)
@@ -73,6 +73,7 @@ struct MenuBarView: View {
                         }) {
                             Image(systemName: "doc.on.doc")
                         }
+                        .accessibilityLabel("Copy URL")
                         .buttonStyle(.plain)
                         .help("Copy URL")
                     }

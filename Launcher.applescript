@@ -1,8 +1,10 @@
 -- Pagla Launcher (AppleScript)
--- Agentic Pre-Flight Check & App Launcher
+-- Pre-Flight Check & App Launcher
 
-set scriptPath to "/Users/aynaghor/KH3L4-GH0R/APPH0LE/CastingC0UCH/preflight_check.sh"
-set appPath to "/Users/aynaghor/KH3L4-GH0R/APPH0LE/PaglaMLX/.build/debug/PaglaMLX"
+-- derive paths relative to this script's location
+set scriptDir to POSIX path of (path to me)
+set scriptPath to scriptDir & "preflight_check.sh"
+set appPath to scriptDir & ".build/debug/PaglaMLX"
 
 try
 	-- Run the pre-flight bash script
@@ -12,11 +14,10 @@ try
 	do shell script "'" & appPath & "' > /dev/null 2>&1 &"
 	
 on error
-	-- If it fails (exit 1), it means the USB is unplugged or something is critically wrong
-	display dialog "CastingC0UCH USB Warehouse is not mounted!" & return & return & "Please plug in the external drive to access your MLX models. The application cannot start." buttons {"Cancel", "I plugged it in, retry"} default button "I plugged it in, retry" with title "PaglaMLX Pre-Flight Error" with icon caution
+	-- If it fails (exit 1), show error
+	display dialog "External storage not mounted!" & return & return & "Please mount the external drive with your MLX models before launching." buttons {"Cancel", "Retry"} default button "Retry" with title "PaglaMLX Launcher" with icon caution
 	
-	if button returned of result is "I plugged it in, retry" then
-		-- Retry recursively
+	if button returned of result is "Retry" then
 		run
 	end if
 end try

@@ -1,10 +1,11 @@
 .DS_Store
-/.build
-/Packages
-/*.xcodeproj
+.build/
+.swiftpm/
 xcuserdata/
 DerivedData/
-.swiftpm/
-.build/
+*.xcodeproj
 *.app/
 *.dmg
+PaglaMLX/
+__pycache__/
+*.pyc

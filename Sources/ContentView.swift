@@ -1,19 +1,26 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var orchestrator: ModelOrchestrator
-    @EnvironmentObject var settings: SettingsManager
-    @EnvironmentObject var remoteAccess: RemoteAccessManager
+    @Environment(ModelOrchestrator.self) var orchestrator
+    @Environment(SettingsManager.self) var settings
+    @Environment(RemoteAccessManager.self) var remoteAccess
     @State private var showingQRCode = false
     
     var body: some View {
+        @Bindable var orchestrator = orchestrator
+        @Bindable var settings = settings
+        @Bindable var remoteAccess = remoteAccess
         NavigationSplitView {
             // MARK: - Sidebar (Model List)
             List(selection: $orchestrator.selectedModel) {
                 if orchestrator.models.isEmpty {
-                    Text("No models found")
-                        .foregroundColor(.secondary)
-                        .italic()
+                    if #available(macOS 14.0, *) {
+                        ContentUnavailableView("No Models Found", systemImage: "magnifyingglass", description: Text("Please ensure your Models Directory is configured and contains valid model files."))
+                    } else {
+                        Text("No models found")
+                            .foregroundColor(.secondary)
+                            .italic()
+                    }
                 } else {
                     ForEach(orchestrator.models) { model in
                         NavigationLink(value: model) {
@@ -46,6 +53,7 @@ struct ContentView: View {
                     Button(action: { orchestrator.scanModels() }) {
                         Image(systemName: "arrow.clockwise")
                     }
+                    .accessibilityLabel("Refresh Models")
                     .help("Rescan Models Directory")
                 }
             }
@@ -79,6 +87,7 @@ struct ContentView: View {
                             Button(action: { showingQRCode = true }) {
                                 Image(systemName: "qrcode")
                             }
+                            .accessibilityLabel("Show QR Code")
                             .help("Show Termux QR Code")
                             .popover(isPresented: $showingQRCode) {
                                 QRCodeView(url: url)
@@ -122,10 +131,10 @@ struct ContentView: View {
                     // Footer Bar
                     if let err = orchestrator.errorMessage {
                         HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text(err)
+                            Label(err, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
+                                .foregroundStyle(.orange)
+                                .symbolRenderingMode(.hierarchical)
                             Spacer()
                         }
                         .padding(8)
@@ -139,6 +148,7 @@ struct ContentView: View {
                         Button(action: { orchestrator.clearLogs() }) {
                             Image(systemName: "trash")
                         }
+                        .accessibilityLabel("Clear Console logs")
                         .help("Clear Console logs")
                         .disabled(logs.isEmpty)
                     }
