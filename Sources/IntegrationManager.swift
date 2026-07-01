@@ -46,7 +46,7 @@ final class IntegrationManager: ObservableObject {
         statuses[target.id] = "Applying..."
         
         let expandedPath = NSString(string: target.configPath).expandingTildeInPath
-        let baseURL = "http://127.0.0.1:\\(port)/v1"
+        let baseURL = "http://127.0.0.1:\(port)/v1"
         
         let script = """
 import sys
@@ -183,10 +183,10 @@ except Exception as e:
             if p.terminationStatus == 0 && output.contains("SUCCESS") {
                 statuses[target.id] = "Configured ✓ (Backup created)"
             } else {
-                statuses[target.id] = "Failed: \\(output)"
+                statuses[target.id] = "Failed: \(output)"
             }
         } catch {
-            statuses[target.id] = "Failed: \\(error.localizedDescription)"
+            statuses[target.id] = "Failed: \(error.localizedDescription)"
         }
     }
 }

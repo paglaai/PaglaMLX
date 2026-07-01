@@ -145,10 +145,8 @@ struct SettingsView: View {
                     
                     VStack(alignment: .leading) {
                         Text("Chat Template Args (JSON)")
-                        TextEditor(text: $settings.chatTemplateArgs)
-                            .font(.system(.caption, design: .monospaced))
+                        TextEditorView(text: $settings.chatTemplateArgs)
                             .frame(height: 60)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3)))
                     }
                 }
             }
@@ -269,10 +267,8 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    TextEditor(text: $settings.systemPrompt)
-                        .font(.system(.body, design: .monospaced))
+                    TextEditorView(text: $settings.systemPrompt)
                         .frame(minHeight: 150)
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3)))
                 }
             }
             .padding(20)
@@ -358,6 +354,7 @@ struct SettingsView: View {
             .tabItem {
                 Label("Cloud", systemImage: "cloud.fill")
             }
+            .tag(6)
             // MARK: 8. Integrations
             Form {
                 Section(header: Text("Auto-Configure Clients").font(.headline)) {

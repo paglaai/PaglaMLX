@@ -151,6 +151,7 @@ if __name__ == "__main__":
 """
         let fm = FileManager.default
         let lengtaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".lengtamlx")
+        try? fm.createDirectory(at: lengtaDir, withIntermediateDirectories: true)
         let scriptPath = lengtaDir.appendingPathComponent("anthropic_proxy.py").path
         try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
         
