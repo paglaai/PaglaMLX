@@ -1,16 +1,17 @@
 import Foundation
+import Observation
 import Combine
 import AppKit
 
 /// Manages a FastAPI-based Python HTTP reverse proxy that routes requests
 /// to the correct `mlx_lm.server` instance based on the requested model name.
 @MainActor
-final class RoutingGateway: ObservableObject {
+@Observable final class RoutingGateway {
     static let shared = RoutingGateway()
     
-    @Published var isRunning = false
-    @Published var port: Int
-    @Published var recentErrors: [String] = []
+    var isRunning = false
+    var port: Int
+    var recentErrors: [String] = []
     
     private var process: Process?
     private var stderrPipe: Pipe?
@@ -25,7 +26,7 @@ final class RoutingGateway: ObservableObject {
         
         // Write the python gateway script to disk
         let script = """
-import os, sys, json, httpx, asyncio
+import os, sys, json, httpx, asyncio, re
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
 import uvicorn
@@ -41,8 +42,248 @@ FREE_ROUTER = os.environ.get("FREE_ROUTER_ENABLED", "false").lower() == "true"
 
 ROUTING_FILE = os.path.expanduser("~/.lengtamlx/routes.json")
 
-# Session routing state for stickiness
 session_routes = {}
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def get_local_routes():
+    try:
+        with open(ROUTING_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def target_for_model(local_routes, model_name):
+    if not model_name:
+        return None
+    if model_name in local_routes:
+        return local_routes[model_name]
+    name_lower = model_name.lower()
+    for key in local_routes:
+        if key.lower() in name_lower or name_lower in key.lower():
+            return local_routes[key]
+    return None
+
+def first_local_port(local_routes):
+    for v in local_routes.values():
+        return v
+    return None
+
+# ---------------------------------------------------------------------------
+# Anthropic → OpenAI message translation
+# ---------------------------------------------------------------------------
+
+def translate_anthropic_messages(body):
+    \"\"\"Convert Anthropic /v1/messages body to OpenAI /v1/chat/completions body.\"\"\"
+    out_messages = []
+
+    if "system" in body and body["system"]:
+        if isinstance(body["system"], str):
+            out_messages.append({"role": "system", "content": body["system"]})
+        elif isinstance(body["system"], list):
+            text = " ".join(b.get("text", "") for b in body["system"] if b.get("type") == "text")
+            out_messages.append({"role": "system", "content": text})
+
+    for msg in body.get("messages", []):
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+
+        if role == "user":
+            if isinstance(content, str):
+                out_messages.append({"role": "user", "content": content})
+            elif isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                    elif block.get("type") == "tool_result":
+                        tool_content = block.get("content", "")
+                        if isinstance(tool_content, list):
+                            tool_content = " ".join(b.get("text", "") for b in tool_content if b.get("type") == "text")
+                        out_messages.append({
+                            "role": "tool",
+                            "tool_call_id": block.get("tool_use_id", ""),
+                            "content": str(tool_content) if tool_content else ""
+                        })
+                if text_parts:
+                    out_messages.append({"role": "user", "content": "\\n".join(text_parts)})
+
+        elif role == "assistant":
+            if isinstance(content, str):
+                out_messages.append({"role": "assistant", "content": content})
+            elif isinstance(content, list):
+                text = ""
+                tool_calls = []
+                for block in content:
+                    bt = block.get("type", "")
+                    if bt == "text":
+                        text += block.get("text", "")
+                    elif bt == "tool_use":
+                        args = json.dumps(block.get("input", {}))
+                        tool_calls.append({
+                            "id": block.get("id", ""),
+                            "type": "function",
+                            "function": {
+                                "name": block.get("name", ""),
+                                "arguments": args
+                            }
+                        })
+                if tool_calls:
+                    out_messages.append({"role": "assistant", "content": text or None, "tool_calls": tool_calls})
+                else:
+                    out_messages.append({"role": "assistant", "content": text})
+
+    tools = None
+    if "tools" in body:
+        tools = []
+        for t in body["tools"]:
+            tools.append({
+                "type": "function",
+                "function": {
+                    "name": t.get("name", ""),
+                    "description": t.get("description", ""),
+                    "parameters": t.get("input_schema", {})
+                }
+            })
+
+    oaibody = {
+        "model": body.get("model", "default"),
+        "messages": out_messages,
+        "stream": body.get("stream", False),
+        "max_tokens": body.get("max_tokens", 4096),
+    }
+    if body.get("temperature") is not None:
+        oaibody["temperature"] = body["temperature"]
+    if body.get("top_p") is not None:
+        oaibody["top_p"] = body["top_p"]
+    if body.get("top_k") is not None:
+        oaibody["top_k"] = body["top_k"]
+    if body.get("stop_sequences"):
+        oaibody["stop"] = body["stop_sequences"]
+    if tools:
+        oaibody["tools"] = tools
+
+    return oaibody
+
+# ---------------------------------------------------------------------------
+# OpenAI → Anthropic non-streaming response translation
+# ---------------------------------------------------------------------------
+
+def translate_nonstream_response(openai_data, model_name):
+    choice = openai_data.get("choices", [{}])[0]
+    msg = choice.get("message", {})
+    content_blocks = []
+    tool_calls = msg.get("tool_calls")
+
+    if msg.get("content"):
+        content_blocks.append({"type": "text", "text": msg["content"]})
+
+    if tool_calls:
+        for tc in tool_calls:
+            try:
+                args = json.loads(tc["function"]["arguments"])
+            except Exception:
+                args = {}
+            content_blocks.append({
+                "type": "tool_use",
+                "id": tc["id"],
+                "name": tc["function"]["name"],
+                "input": args
+            })
+
+    finish = choice.get("finish_reason", "stop")
+    stop_reason = {"stop": "end_turn", "tool_calls": "tool_use", "length": "max_tokens"}.get(finish, finish)
+
+    usage = openai_data.get("usage", {})
+    return {
+        "id": openai_data.get("id", "msg_0000000000"),
+        "type": "message",
+        "role": "assistant",
+        "content": content_blocks,
+        "model": model_name,
+        "stop_reason": stop_reason,
+        "stop_sequence": None,
+        "usage": {
+            "input_tokens": usage.get("prompt_tokens", 0),
+            "output_tokens": usage.get("completion_tokens", 0)
+        }
+    }
+
+# ---------------------------------------------------------------------------
+# OpenAI → Anthropic streaming translation
+# ---------------------------------------------------------------------------
+
+def translate_stream_chunk(data, model_name, state):
+    \"\"\"Yield zero or more SSE text fragments for a single OpenAI chunk.\"\"\"
+    choices = data.get("choices", [])
+    if not choices:
+        return
+    delta = choices[0].get("delta", {})
+    finish_reason = choices[0].get("finish_reason")
+
+    text = delta.get("content", "")
+    tool_calls = delta.get("tool_calls")
+
+    if text and not state["text_started"]:
+        state["text_started"] = True
+        yield 'event: content_block_start\\ndata: {}\\n\\n'.format(json.dumps({
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {"type": "text", "text": ""}
+        }))
+
+    if text:
+        yield 'event: content_block_delta\\ndata: {}\\n\\n'.format(json.dumps({
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {"type": "text_delta", "text": text}
+        }))
+
+    if tool_calls:
+        for tc in tool_calls:
+            idx = tc.get("index", 0)
+            func = tc.get("function", {})
+            name = func.get("name", "")
+            args = func.get("arguments", "")
+
+            if name and idx not in state["tool_indices"]:
+                state["tool_indices"].add(idx)
+                yield 'event: content_block_start\\ndata: {}\\n\\n'.format(json.dumps({
+                    "type": "content_block_start",
+                    "index": len(state["tool_indices"]),
+                    "content_block": {"type": "tool_use", "id": tc.get("id", ""), "name": name, "input": {}}
+                }))
+
+            if args:
+                yield 'event: content_block_delta\\ndata: {}\\n\\n'.format(json.dumps({
+                    "type": "content_block_delta",
+                    "index": len(state["tool_indices"]),
+                    "delta": {"type": "input_json_delta", "partial_json": args}
+                }))
+
+    if finish_reason:
+        if state["text_started"]:
+            yield 'event: content_block_stop\\ndata: {"type":"content_block_stop","index":0}\\n\\n'
+        for idx in state["tool_indices"]:
+            yield 'event: content_block_stop\\ndata: {}\\n\\n'.format(json.dumps({
+                "type": "content_block_stop", "index": idx
+            }))
+
+        stop_map = {"stop": "end_turn", "tool_calls": "tool_use", "length": "max_tokens"}
+        reason = stop_map.get(finish_reason, finish_reason)
+        usage = data.get("usage", {})
+        yield 'event: message_delta\\ndata: {}\\n\\n'.format(json.dumps({
+            "type": "message_delta",
+            "delta": {"stop_reason": reason, "stop_sequence": None},
+            "usage": {"output_tokens": usage.get("completion_tokens", 0)}
+        }))
+        yield 'event: message_stop\\ndata: {"type":"message_stop"}\\n\\n'
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
 
 @app.middleware("http")
 async def check_auth(request: Request, call_next):
@@ -52,18 +293,116 @@ async def check_auth(request: Request, call_next):
             return Response(content="Unauthorized", status_code=401)
     return await call_next(request)
 
-def get_local_routes():
+# ---------------------------------------------------------------------------
+# Anthropic /v1/messages endpoint (native translation)
+# ---------------------------------------------------------------------------
+
+@app.post("/v1/messages")
+async def anthropic_messages(request: Request):
     try:
-        with open(ROUTING_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {}
+        body = await request.json()
+    except Exception:
+        return anthropic_error("invalid_request_error", "Invalid JSON body")
+
+    local_routes = get_local_routes()
+    model_name = body.get("model", "default")
+
+    port = target_for_model(local_routes, model_name)
+    if port is None:
+        port = first_local_port(local_routes)
+    if port is None:
+        return anthropic_error("api_error", "No local model is running. Start a model first.")
+
+    target_url = f"http://127.0.0.1:{port}/v1/chat/completions"
+    oaibody = translate_anthropic_messages(body)
+    is_stream = body.get("stream", False)
+
+    oai_headers = {"Content-Type": "application/json"}
+    if API_KEY:
+        oai_headers["Authorization"] = f"Bearer {API_KEY}"
+
+    client = httpx.AsyncClient(timeout=None)
+
+    try:
+        if is_stream:
+            return await stream_anthropic(client, target_url, oai_headers, oaibody, model_name)
+        else:
+            return await nonstream_anthropic(client, target_url, oai_headers, oaibody, model_name)
+    except httpx.HTTPStatusError as e:
+        sys.stderr.write(f"MLX server HTTP error: {e.response.status_code}\\n")
+        return anthropic_error("api_error", f"Upstream model error (HTTP {e.response.status_code})")
+    except httpx.ConnectError:
+        return anthropic_error("api_error", "Cannot connect to local MLX server. It may have crashed.")
+    except Exception as e:
+        sys.stderr.write(f"Anthropic proxy error: {e}\\n")
+        return anthropic_error("api_error", f"Internal proxy error: {str(e)}")
+
+
+async def stream_anthropic(client, url, headers, oaibody, model_name):
+    req = client.build_request("POST", url, headers=headers, json=oaibody)
+    response = await client.send(req, stream=True)
+
+    state = {"text_started": False, "tool_indices": set()}
+
+    async def generator():
+        yield 'event: message_start\\ndata: {}\\n\\n'.format(json.dumps({
+            "type": "message_start",
+            "message": {
+                "id": "msg_0000000000",
+                "type": "message",
+                "role": "assistant",
+                "content": [],
+                "model": model_name,
+                "stop_reason": None,
+                "stop_sequence": None,
+                "usage": {"input_tokens": 0, "output_tokens": 0}
+            }
+        }))
+
+        async for line in response.aiter_lines():
+            if not line.startswith("data: "):
+                continue
+            payload = line[6:]
+            if payload.strip() == "[DONE]":
+                break
+            try:
+                data = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+            for event in translate_stream_chunk(data, model_name, state):
+                yield event + "\\n"
+
+    return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+async def nonstream_anthropic(client, url, headers, oaibody, model_name):
+    response = await client.post(url, headers=headers, json=oaibody)
+    if response.status_code != 200:
+        return anthropic_error("api_error", f"Model returned HTTP {response.status_code}")
+    data = response.json()
+    anthropic_data = translate_nonstream_response(data, model_name)
+    return Response(content=json.dumps(anthropic_data), media_type="application/json")
+
+
+def anthropic_error(type_, message):
+    return Response(
+        content=json.dumps({"type": "error", "error": {"type": type_, "message": message}}),
+        status_code=400,
+        media_type="application/json"
+    )
+
+# ---------------------------------------------------------------------------
+# OpenAI /v1/chat/completions catch-all proxy (existing)
+# ---------------------------------------------------------------------------
 
 def get_session_id(request: Request):
     return request.headers.get("x-session-id") or request.headers.get("authorization", "default")
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 async def proxy(request: Request, path: str):
+    if path.startswith("v1/messages"):
+        return await anthropic_messages(request)
+
     local_routes = get_local_routes()
     
     model_name = None
@@ -96,9 +435,8 @@ async def proxy(request: Request, path: str):
                 
         elif name_lower.startswith("claude-"):
             if ANT_KEY:
-                # Assuming this is going to AnthropicProxy or direct OpenAI-compatible endpoint.
-                # If going direct to Anthropic API, it might need translation, but we have an AnthropicProxy for the other direction.
-                # For now, just route assuming the client is using OpenAI format and the target accepts it.
+                # Anthropic API requests route through the /v1/messages handler above,
+                # but if they hit here (e.g. /v1/complete), forward with the key.
                 target_url = f"https://api.anthropic.com/{path}"
                 fwd_headers["x-api-key"] = ANT_KEY
                 fwd_headers.pop("authorization", None)
