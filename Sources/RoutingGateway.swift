@@ -462,6 +462,25 @@ def anthropic_error(type_, message):
 def get_session_id(request: Request):
     return request.headers.get("x-session-id") or request.headers.get("authorization", "default")
 
+def has_image_content(body):
+    \"\"\"Check if the request body contains image_url or image data content.\"\"\"
+    if not body or "messages" not in body:
+        return False
+    for msg in body.get("messages", []):
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") in ("image_url", "image"):
+                    return True
+    return False
+
+def suggests_vlm(model_name):
+    \"\"\"Heuristic: does the model name suggest vision/language support?\"\"\"
+    if not model_name:
+        return False
+    name = model_name.lower()
+    return any(kw in name for kw in ("vl", "vision", " multimodal", "vlm", "4v", "phi-3-v", "llava", "cogview", "idefics", "fuyu", "paligemma", "qwen2-vl", "internvl", "minicpm-v"))
+
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 async def proxy(request: Request, path: str):
     if path.startswith("v1/messages"):
@@ -478,6 +497,15 @@ async def proxy(request: Request, path: str):
         except:
             pass
             
+    # Reject image content for non-VLM local models before routing
+    if body and has_image_content(body) and model_name and model_name in local_routes:
+        if not suggests_vlm(model_name):
+            return openai_error(
+                f"The model '{model_name}' does not support image input. "
+                f"Use a VLM model (e.g., one with 'vl' or 'vision' in the name) for image understanding.",
+                "invalid_request_error", 400
+            )
+
     session_id = get_session_id(request)
     target_url = None
     fwd_headers = dict(request.headers)

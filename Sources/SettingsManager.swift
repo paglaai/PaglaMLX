@@ -163,7 +163,7 @@ import SwiftUI
 
     // MARK: Init
 
-    static let defaultModelsDir = NSHomeDirectory() + "/Models/mlx"
+    static let defaultModelsDir = "/Volumes/CastingC0UCH/M0DEL/MLX"
 
     private init() {
         let d = UserDefaults.standard

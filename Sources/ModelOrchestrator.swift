@@ -399,7 +399,12 @@ import AppKit
                 selectedModel = first
             }
         } catch {
-            errorMessage = "Failed to scan: \(error.localizedDescription)"
+            let nsErr = error as NSError
+            if nsErr.domain == NSCocoaErrorDomain && nsErr.code == NSFileNoSuchFileError {
+                errorMessage = "Model directory not found at \(settings.modelsDirectory). Go to Settings → App → Models Directory and set the correct path."
+            } else {
+                errorMessage = "Failed to scan: \(error.localizedDescription)"
+            }
             models = []
         }
     }
