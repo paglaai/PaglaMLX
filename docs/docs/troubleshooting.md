@@ -1,5 +1,21 @@
 # Troubleshooting
 
+## Model returns 404 / "Repository Not Found"
+
+**Symptom**: Requests to a running local model return `{"error": "Repository Not Found for url: https://huggingface.co/api/models/..."}`
+
+**Cause**: `mlx_lm.server` interprets the `model` field in your request body as a HuggingFace repo ID. If the name doesn't match the loaded model, it tries to fetch from HuggingFace.
+
+**Solution**: Use the gateway at `:2525/v1` instead of connecting directly to the model's port. The gateway automatically sets the correct model identifier. Alternatively, set `"model": "default_model"` in your request body when targeting a model server directly.
+
+## HF Cache not found
+
+**Symptom**: Model process crashes after loading with `CacheNotFound` error.
+
+**Cause**: `mlx_lm.server` needs a HuggingFace Hub cache directory. If your models are on an external volume, the default cache path may not exist.
+
+**Solution**: Set the `HF_HUB_CACHE` environment variable before launching PaglaMLX, or the app will set it automatically based on your models directory parent.
+
 ## Python not found
 
 **Symptom**: Preflight reports "No valid Python executable found."
