@@ -320,7 +320,7 @@ async def check_auth(request: Request, call_next):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.2.1"}
+    return {"status": "ok", "version": "1.2.2"}
 
 MODELS_DIR = os.environ.get("MODELS_DIR", "")
 
