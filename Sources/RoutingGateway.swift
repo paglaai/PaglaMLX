@@ -170,7 +170,7 @@ def translate_anthropic_messages(body):
             })
 
     oaibody = {
-        "model": body.get("model", "default"),
+        "model": "default_model",
         "messages": out_messages,
         "stream": body.get("stream", False),
         "max_tokens": body.get("max_tokens", 4096),
@@ -515,6 +515,8 @@ async def proxy(request: Request, path: str):
     # 1. Check local models
     if model_name and model_name in local_routes:
         target_url = f"http://127.0.0.1:{local_routes[model_name]}/{path}"
+        if body is not None:
+            body["model"] = "default_model"
     
     # 2. Heuristics / Auto-Router for external APIs
     elif model_name:
@@ -565,6 +567,8 @@ async def proxy(request: Request, path: str):
     if not target_url and local_routes:
         port = list(local_routes.values())[0]
         target_url = f"http://127.0.0.1:{port}/{path}"
+        if body is not None:
+            body["model"] = "default_model"
         
     if not target_url:
         return openai_error("No route available — no model is running and no cloud provider is configured.", "no_route", 503)

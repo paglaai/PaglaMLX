@@ -67,6 +67,7 @@ struct SettingsView: View {
             .tag(0)
             
             // MARK: 2. Server (Parameters)
+            ScrollView {
             Form {
                 Section(header: Text("Generation Parameters").font(.headline)) {
                     HStack {
@@ -155,6 +156,7 @@ struct SettingsView: View {
                             .frame(height: 60)
                     }
                 }
+            }
             }
             .padding(20)
             .tabItem {
@@ -322,6 +324,7 @@ struct SettingsView: View {
             .tag(5)
             
             // MARK: 7. Cloud / BYOK
+            ScrollView {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -389,6 +392,7 @@ struct SettingsView: View {
                         .font(.custom("Lucida Grande", size: 14.95))
                 }
             }
+            }
             .font(.custom("Lucida Grande", size: 13))
             .padding(20)
             .tabItem {
@@ -443,7 +447,7 @@ struct SettingsView: View {
                 .tag(8)
             
         }
-        .frame(width: 550, height: 420)
+        .frame(width: 640, height: 520)
     }
 }
 
@@ -617,18 +621,18 @@ private struct ApiDetailsTab: View {
     }
     
     private func copyRow(_ label: String, _ value: String) -> some View {
-        HStack {
+        HStack(alignment: .top) {
             Text(label + ":").font(.caption).foregroundColor(.secondary).frame(width: 80, alignment: .trailing)
-            Text(value).font(.system(.caption, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+            Text(value).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
             Spacer()
             copyButton(value)
         }
     }
     
     private func endpointRow(_ method: String, _ url: String, _ desc: String) -> some View {
-        HStack {
+        HStack(alignment: .top) {
             Text(method).font(.system(.caption2, design: .monospaced)).foregroundColor(method == "GET" ? .green : .orange).frame(width: 38)
-            Text(url).font(.system(.caption, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+            Text(url).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
             Spacer()
             Text(desc).font(.caption2).foregroundColor(.secondary)
             copyButton(url)

@@ -85,6 +85,9 @@ import AppKit
         let extraPaths = "/Library/Frameworks/Python.framework/Versions/3.14/bin"
                        + ":/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
         env["PATH"] = extraPaths + ":" + (env["PATH"] ?? "")
+        if !env.keys.contains("HF_HUB_CACHE") {
+            env["HF_HUB_CACHE"] = "/Volumes/CastingC0UCH/M0DEL/HF_CACHE"
+        }
         p.environment = env
         
         p.standardOutput = stdout

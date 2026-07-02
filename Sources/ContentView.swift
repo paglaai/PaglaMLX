@@ -33,7 +33,7 @@ struct ContentView: View {
                                     .foregroundColor(model.modelType == "VLM" ? .blue : .primary)
 
                                 VStack(alignment: .leading) {
-                                    Text(model.name).font(.headline)
+                                    Text(model.name).font(.headline).lineLimit(1)
                                     Text("\(model.sizeFormatted) • \(model.contextLength) ctx")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -61,6 +61,7 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Models")
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { orchestrator.scanModels() }) {
@@ -75,10 +76,145 @@ struct ContentView: View {
             if let selectedModel = orchestrator.selectedModel {
                 detailView(selectedModel)
             } else {
-                Text("Select a model from the sidebar to begin.")
-                    .foregroundColor(.secondary)
+                serverDocPanel
             }
         }
+    }
+
+    // MARK: - Server Doc Panel
+
+    @State private var docCopied: String?
+
+    private var serverDocPanel: some View {
+        let baseURL = "http://\(settings.host):\(settings.port)"
+        let apiBase = "\(baseURL)/v1"
+        let keyLabel = settings.apiKey.isEmpty ? "(none set)" : settings.apiKey
+
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                GroupBox(label: Label("Connection Details", systemImage: "network").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        docRow("Base URL", apiBase)
+                        docRow("API Key", keyLabel)
+                        docRow("Port", "\(settings.port)")
+                        docRow("Host", settings.host)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                GroupBox(label: Label("Quick Test (curl)", systemImage: "terminal").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        docCopyBlock(#"curl \#(baseURL)/"#)
+                        Text("→ {\"status\":\"ok\"}").font(.caption).foregroundColor(.secondary)
+
+                        docCopyBlock(#"curl \#(apiBase)/chat/completions \#(apiKeyDocHeader)"# + """
+                         \
+                          -H "Content-Type: application/json" \
+                          -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+                        """)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                GroupBox(label: Label("Provider Config", systemImage: "square.and.pencil").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        docProviderBlock("OpenAI-Compatible Client") {
+                            """
+                            Base URL: \(apiBase)
+                            API Key:  \(keyLabel)
+                            Model:    auto
+                            """
+                        }
+                        docProviderBlock("Claude Desktop") {
+                            #"""
+                            "env": {
+                              "ANTHROPIC_BASE_URL": "\#(baseURL)",
+                              "ANTHROPIC_API_KEY": "\#(settings.apiKey)"
+                            }
+                            """#
+                        }
+                        docProviderBlock("VS Code (settings.json)") {
+                            #"""
+                            "github.copilot.advanced.debug.overrideProxyUrl": "\#(baseURL)"
+                            """#
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                GroupBox(label: Label("Routing", systemImage: "arrow.triangle.branch").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        routeLine("auto", "Best local model")
+                        routeLine("free", "OpenRouter auto (Free Router)")
+                        routeLine("gpt-*", "OpenAI")
+                        routeLine("claude-*", "Anthropic")
+                        routeLine("gemini-*", "Gemini")
+                        routeLine("openrouter/*", "OpenRouter direct")
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding(20)
+        }
+    }
+
+    private func docRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(label + ":").font(.caption).foregroundColor(.secondary).frame(width: 72, alignment: .trailing)
+            Text(value).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+            Spacer()
+            docCopyButton(value)
+        }
+    }
+
+    private func docCopyBlock(_ text: String) -> some View {
+        HStack(alignment: .top) {
+            Text(text).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                .padding(8)
+                .background(Color(.textBackgroundColor))
+                .cornerRadius(6)
+            docCopyButton(text)
+        }
+    }
+
+    private func docProviderBlock(_ name: String, content: () -> String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(name).font(.caption).bold()
+            HStack(alignment: .top) {
+                Text(content()).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
+                    .padding(8)
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(6)
+                docCopyButton(content())
+            }
+        }
+    }
+
+    private func routeLine(_ prefix: String, _ dest: String) -> some View {
+        HStack {
+            Text(prefix).font(.system(.caption, design: .monospaced)).frame(width: 100, alignment: .leading)
+            Text("→").font(.caption).foregroundColor(.secondary)
+            Text(dest).font(.caption).foregroundColor(.secondary)
+        }
+    }
+
+    private var apiKeyDocHeader: String {
+        settings.apiKey.isEmpty ? "" : #"-H "Authorization: Bearer \#(settings.apiKey)""#
+    }
+
+    private func docCopyButton(_ text: String) -> some View {
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            docCopied = text
+            Task { try? await Task.sleep(for: .seconds(1.5)); docCopied = nil }
+        } label: {
+            Image(systemName: docCopied == text ? "checkmark" : "doc.on.doc")
+                .foregroundColor(docCopied == text ? .green : .secondary)
+                .font(.caption)
+        }
+        .buttonStyle(.plain)
+        .help("Copy")
     }
 
     // MARK: - Detail
