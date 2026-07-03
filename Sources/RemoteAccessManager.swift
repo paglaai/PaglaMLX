@@ -9,11 +9,13 @@ import Combine
     var tailscaleIP: String?
     var localIP: String?
     
-    private init() {
-        refreshIPs()
-    }
+    private var didRefresh = false
+    
+    private init() {}
     
     func refreshIPs() {
+        guard !didRefresh else { return }
+        didRefresh = true
         self.tailscaleIP = getTailscaleIP()
         self.localIP = getLocalIP()
     }
@@ -90,6 +92,7 @@ import Combine
     }
     
     var bestRemoteURL: String? {
+        refreshIPs()
         let port = SettingsManager.shared.port
         let host = SettingsManager.shared.host
         
