@@ -144,7 +144,7 @@ struct ContentView: View {
 
                 GroupBox(label: Label("Routing", systemImage: "arrow.triangle.branch").font(.headline)) {
                     VStack(alignment: .leading, spacing: 4) {
-                        routeLine("auto", "Best local model")
+                        routeLine("auto", "Heuristic: VLM → context → intent → best local")
                         routeLine("free", "OpenRouter auto (Free Router)")
                         routeLine("gpt-*", "OpenAI")
                         routeLine("claude-*", "Anthropic")

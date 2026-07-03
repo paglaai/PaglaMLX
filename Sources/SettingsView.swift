@@ -382,7 +382,7 @@ struct SettingsView: View {
                         }
                         .foregroundColor(Color(hex: "#a0a0a0"))
 
-                        Text("model=\"auto\" routes via: multimodal → long context → keyword (code/math) → first running local model. model=\"free\" routes through the Free Router provider (OpenRouter).")
+                        Text("model=\"auto\" uses heuristic engine: VLM for images → context-fit scoring → keyword intent (code/math/reasoning) → best local model. model=\"free\" routes through Free Router (OpenRouter).")
                             .font(.custom("Lucida Grande", size: 13))
                             .foregroundColor(Color(hex: "#a0a0a0"))
                             .fixedSize(horizontal: false, vertical: true)
@@ -590,7 +590,7 @@ private struct ApiDetailsTab: View {
                 // 5. Routing Table
                 GroupBox(label: Label("Routing Table", systemImage: "arrow.triangle.branch").font(.headline)) {
                     VStack(alignment: .leading, spacing: 4) {
-                        routeRow("auto", "Best local model (Auto-Router)")
+                        routeRow("auto", "Heuristic engine: VLM → context → intent → best local")
                         routeRow("free", "OpenRouter auto (Free Router)")
                         routeRow("gpt-* / o1 / o3", "OpenAI API")
                         routeRow("claude-*", "Anthropic API")

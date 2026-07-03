@@ -58,19 +58,33 @@ def get_local_routes():
     except Exception:
         return {}
 
+def normalize_routes(local_routes):
+    \"\"\"Ensure all route entries are dicts with port/context_length/model_type.\"\"\"
+    normalized = {}
+    for name, val in local_routes.items():
+        if isinstance(val, dict):
+            normalized[name] = val
+        else:
+            normalized[name] = {"port": val, "context_length": 4096, "model_type": "LLM"}
+    return normalized
+
 def target_for_model(local_routes, model_name):
     if not model_name:
         return None
-    if model_name in local_routes:
-        return local_routes[model_name]
+    for key in list(local_routes.keys()):
+        if model_name == key:
+            return local_routes[key].get("port") if isinstance(local_routes[key], dict) else local_routes[key]
     name_lower = model_name.lower()
     for key in local_routes:
         if key.lower() in name_lower or name_lower in key.lower():
-            return local_routes[key]
+            entry = local_routes[key]
+            return entry.get("port") if isinstance(entry, dict) else entry
     return None
 
 def first_local_port(local_routes):
     for v in local_routes.values():
+        if isinstance(v, dict):
+            return v.get("port")
         return v
     return None
 
@@ -320,7 +334,7 @@ async def check_auth(request: Request, call_next):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.2.2"}
+    return {"status": "ok", "version": "1.3.0"}
 
 MODELS_DIR = os.environ.get("MODELS_DIR", "")
 
@@ -481,12 +495,128 @@ def suggests_vlm(model_name):
     name = model_name.lower()
     return any(kw in name for kw in ("vl", "vision", " multimodal", "vlm", "4v", "phi-3-v", "llava", "cogview", "idefics", "fuyu", "paligemma", "qwen2-vl", "internvl", "minicpm-v"))
 
+# ---------------------------------------------------------------------------
+# Auto-Router Heuristic Engine
+# ---------------------------------------------------------------------------
+
+def estimate_token_count(body):
+    \"\"\"Rough token count estimation from messages (~4 chars/token).\"\"\"
+    if not body or "messages" not in body:
+        return 0
+    total_chars = 0
+    for msg in body.get("messages", []):
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            total_chars += len(content)
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    if block.get("type") == "text":
+                        total_chars += len(block.get("text", ""))
+                    if block.get("type") == "image_url":
+                        total_chars += 4000
+    return total_chars // 4
+
+def detect_intent(body):
+    \"\"\"Detect user intent from message content.\"\"\"
+    if not body or "messages" not in body:
+        return "general"
+    text = ""
+    for msg in body.get("messages", []):
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            text += " " + content
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text += " " + block.get("text", "")
+    text_lower = text.lower()
+    code_kws = ["code", "function", "implement", "debug", "bug", "fix", "refactor",
+                "algorithm", "syntax", "compile", "```", "def ", "class ", "import ",
+                "const ", "var ", "program"]
+    math_kws = ["solve", "equation", "calculate", "derivative", "integral",
+                "theorem", "proof", "algebra", "calculus"]
+    reasoning_kws = ["explain", "reason", "analyze", "compare", "contrast",
+                     "why", "how does", "what if", "think step by step"]
+    code_score = sum(1 for kw in code_kws if kw in text_lower)
+    math_score = sum(1 for kw in math_kws if kw in text_lower)
+    reasoning_score = sum(1 for kw in reasoning_kws if kw in text_lower)
+    if code_score >= 2 or math_score >= 2:
+        return "technical"
+    if reasoning_score >= 2:
+        return "reasoning"
+    return "general"
+
+def get_vlm_on_disk():
+    \"\"\"Return list of VLM model names available on disk but not running.\"\"\"
+    if not MODELS_DIR or not os.path.isdir(MODELS_DIR):
+        return []
+    results = []
+    for entry in sorted(os.listdir(MODELS_DIR)):
+        model_path = os.path.join(MODELS_DIR, entry)
+        if os.path.isdir(model_path):
+            config_path = os.path.join(model_path, "config.json")
+            if os.path.isfile(config_path):
+                try:
+                    with open(config_path) as f:
+                        config = json.load(f)
+                    archs = config.get("architectures", [])
+                    if any("vl" in a.lower() or "vision" in a.lower() for a in archs):
+                        results.append(entry)
+                except Exception:
+                    pass
+    return results
+
+def auto_route(body, local_routes):
+    \"\"\"Auto-Router heuristic: pick the best running local model for this request.\"\"\"
+    if not local_routes:
+        return None
+    has_images = has_image_content(body)
+    estimated_tokens = estimate_token_count(body) if body else 0
+    intent = detect_intent(body) if body else "general"
+    best_port = None
+    best_score = -999
+    for name, info in local_routes.items():
+        port = info.get("port")
+        ct_length = info.get("context_length", 4096)
+        mtype = info.get("model_type", "LLM")
+        score = 0
+        if has_images:
+            if mtype == "VLM":
+                score += 1000
+            else:
+                continue
+        if estimated_tokens > 0:
+            if estimated_tokens > ct_length:
+                continue
+            ratio = estimated_tokens / ct_length
+            if ratio > 0.5:
+                score += 50
+            elif ratio > 0.2:
+                score += 30
+            else:
+                score += 10
+        if intent == "technical":
+            score += 20
+        elif intent == "reasoning":
+            score += 15
+        if best_port is None or score > best_score:
+            best_port = port
+            best_score = score
+    if best_port:
+        return best_port
+    if has_images:
+        vlm_list = get_vlm_on_disk()
+        if vlm_list:
+            sys.stderr.write(f"[auto-router] Image request but no VLM running. Available on disk: {', '.join(vlm_list)}\\n")
+    return None
+
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 async def proxy(request: Request, path: str):
     if path.startswith("v1/messages"):
         return await anthropic_messages(request)
 
-    local_routes = get_local_routes()
+    local_routes = normalize_routes(get_local_routes())
     
     model_name = None
     body = None
@@ -514,11 +644,19 @@ async def proxy(request: Request, path: str):
     
     # 1. Check local models
     if model_name and model_name in local_routes:
-        target_url = f"http://127.0.0.1:{local_routes[model_name]}/{path}"
+        target_url = f"http://127.0.0.1:{local_routes[model_name]['port']}/{path}"
         if body is not None:
             body["model"] = "default_model"
     
-    # 2. Heuristics / Auto-Router for external APIs
+    # 1b. Auto-Router: heuristic for model=auto
+    elif model_name and model_name.lower() == "auto":
+        auto_port = auto_route(body, local_routes)
+        if auto_port:
+            target_url = f"http://127.0.0.1:{auto_port}/{path}"
+            if body is not None:
+                body["model"] = "default_model"
+    
+    # 2. Heuristics for external APIs
     elif model_name:
         name_lower = model_name.lower()
         
@@ -553,33 +691,59 @@ async def proxy(request: Request, path: str):
     
     # 3. Stickiness fallback
     if not target_url and session_id in session_routes:
-        base = session_routes[session_id]["base"]
-        auth_header = session_routes[session_id]["auth"]
+        base = session_routes[session_id].get("base")
+        if not base:
+            return openai_error("Corrupted session route.", "session_error", 500)
+        auth_header = session_routes[session_id].get("auth")
         if auth_header:
             fwd_headers["authorization"] = auth_header
-        elif "x-api-key" in session_routes[session_id]:
-            fwd_headers["x-api-key"] = session_routes[session_id]["x-api-key"]
+        xak = session_routes[session_id].get("x-api-key")
+        if xak:
+            fwd_headers["x-api-key"] = xak
             fwd_headers.pop("authorization", None)
             
         target_url = f"{base}/{path}"
+        # Override model name for local mlx_lm.server destinations
+        if body is not None and base.startswith("http://127.0.0.1"):
+            body["model"] = "default_model"
         
     # 4. Local Default Fallback
     if not target_url and local_routes:
-        port = list(local_routes.values())[0]
+        port = list(local_routes.values())[0]["port"]
         target_url = f"http://127.0.0.1:{port}/{path}"
         if body is not None:
             body["model"] = "default_model"
-        
+
+    # 5. Post-routing VLM guard
+    if target_url and body and has_image_content(body) and target_url.startswith("http://127.0.0.1"):
+        try:
+            target_port = int(target_url.split(":")[2].split("/")[0])
+        except (ValueError, IndexError):
+            target_port = None
+        if target_port is not None:
+            is_vlm = any(
+                isinstance(info, dict) and info.get("port") == target_port and info.get("model_type") == "VLM"
+                for info in local_routes.values()
+            )
+            if not is_vlm:
+                return openai_error(
+                    "The current model does not support image input. "
+                    "Switch to a VLM model (e.g., one with 'vl' or 'vision' in the name) for image understanding.",
+                    "invalid_request_error", 400
+                )
+
     if not target_url:
         return openai_error("No route available — no model is running and no cloud provider is configured.", "no_route", 503)
         
-    # Save stickiness
+    # Save stickiness (only store truthy headers, never None)
     base_url = target_url[:target_url.rfind(f"/{path}")]
-    session_routes[session_id] = {
-        "base": base_url, 
-        "auth": fwd_headers.get("authorization"),
-        "x-api-key": fwd_headers.get("x-api-key")
-    }
+    session_routes[session_id] = {"base": base_url}
+    auth_val = fwd_headers.get("authorization")
+    xak_val = fwd_headers.get("x-api-key")
+    if auth_val:
+        session_routes[session_id]["auth"] = auth_val
+    if xak_val:
+        session_routes[session_id]["x-api-key"] = xak_val
     
     client = httpx.AsyncClient(timeout=None)
     
@@ -688,7 +852,7 @@ if __name__ == "__main__":
     }
     
     /// Called by ModelOrchestrator whenever a model starts or stops
-    func updateRoutingTable(_ routes: [String: Int]) {
+    func updateRoutingTable(_ routes: [String: [String: Any]]) {
         let fm = FileManager.default
         let lengtaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".lengtamlx")
         try? fm.createDirectory(at: lengtaDir, withIntermediateDirectories: true)

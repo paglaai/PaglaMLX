@@ -10,9 +10,21 @@ When a request arrives, the gateway checks the following in order:
 
 If the model name is an exact key in `routes.json` (`~/.lengtamlx/routes.json`), the request is forwarded to the corresponding local `mlx_lm.server` process.
 
-### 2. Local substring match
+### 2. Auto-Router (`model=auto`)
 
-If no exact match, the gateway checks whether the model name contains (or is contained in) any local route key (case-insensitive).
+When `model=auto` is requested, the gateway runs a heuristic engine to pick the best running local model:
+
+| Factor                 | Weight | Description                                     |
+|------------------------|--------|-------------------------------------------------|
+| **Multimodal**         | +1000  | Image requests must go to a VLM (`modelType=VLM`) — non-VLM models are skipped entirely |
+| **Context fit**        | +50    | Estimated prompt tokens >50% of model context — snug fit preferred |
+|                        | +30    | Estimated tokens 20–50% of context — good fit   |
+|                        | +10    | Estimated tokens <20% — works but overkill      |
+| **Token overflow**     | skip   | Estimated tokens exceed context length — model cannot fit the prompt |
+| **Keyword intent**     | +20    | Code/math keywords detected — prefer capable models for technical work |
+|                        | +15    | Reasoning keywords detected                     |
+
+The model with the highest score is selected. If no running model fits (e.g., image request but no VLM running), the gateway logs available VLM models on disk and falls through to the default fallback.
 
 ### 3. Prefix-based cloud routing
 
@@ -22,33 +34,31 @@ If no exact match, the gateway checks whether the model name contains (or is con
 | `claude-`          | Anthropic       | `ANTHROPIC_KEY`        |
 | `gemini-`          | Gemini          | `GEMINI_KEY`           |
 | `openrouter/`      | OpenRouter      | `OPENROUTER_KEY`       |
-| `groq/`            | Groq            | `GROQ_KEY`             |
-| `together/`        | Together AI     | `TOGETHER_KEY`         |
+| `free`             | OpenRouter auto | `FREE_ROUTER_KEY`      |
 
-### 4. Free Router
-
-If the Free Router is enabled (Settings → Cloud) and no match is found, the request is forwarded to OpenRouter.
-
-### 5. Session stickiness
+### 4. Session stickiness
 
 The gateway tracks session IDs (from `x-session-id` or `authorization` header). If the current request's session has been routed before, it reuses the previous backend.
 
-### 6. Local default fallback
+### 5. Local default fallback
 
-If routes exist but no match, the request is forwarded to the first available local model.
+If no match, the request is forwarded to the first available running local model.
 
-### 7. 503
+### 6. 503
 
 If none of the above applies, the gateway returns HTTP 503.
 
-## Auto-Router (`model=auto`)
+## Token estimation
 
-When `model=auto` is requested, the Auto-Router heuristic selects the best local model:
+The auto-router estimates prompt token count at ~4 characters per token. Image content is estimated at ~1000 tokens per image. This is a rough heuristic — the model's `max_position_embeddings` from `config.json` is used as the context limit.
 
-1. **Multimodal** — prefer models with vision capabilities (`vl`, `vision` in name).
-2. **Long context** — prefer models with larger context windows.
-3. **Keyword intent** — detect code (`coder`, `code`) or math (`reason`, `math`) models.
-4. **Default** — fall back to the model tagged as default in Settings.
+## Intent detection
+
+The gateway scans message text for keyword patterns:
+
+- **Technical** (code/math): `code`, `function`, `implement`, `debug`, `solve`, `equation`, `calculate`, etc.
+- **Reasoning**: `explain`, `reason`, `analyze`, `compare`, `think step by step`, etc.
+- **General**: none of the above
 
 ## Session stickiness
 

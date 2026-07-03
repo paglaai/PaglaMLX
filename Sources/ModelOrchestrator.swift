@@ -279,10 +279,14 @@ import AppKit
     }
     
     private func updateGateway() {
-        // Collect mapping of ModelName -> Port for all running instances
-        var routes: [String: Int] = [:]
+        // Collect mapping of ModelName -> metadata for all running instances
+        var routes: [String: [String: Any]] = [:]
         for (name, inst) in instances where inst.isRunning {
-            routes[name] = inst.port
+            routes[name] = [
+                "port": inst.port,
+                "context_length": inst.model.contextLength,
+                "model_type": inst.model.modelType
+            ]
         }
         
         RoutingGateway.shared.updateRoutingTable(routes)
