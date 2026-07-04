@@ -1,0 +1,407 @@
+openapi: 3.0.3
+info:
+  title: PaglaMLX Gateway API
+  version: "1.3.0"
+  description: >
+    Local reverse proxy for MLX models on Apple Silicon. Exposes an
+    OpenAI-compatible surface and an Anthropic-compatible surface, and
+    routes each request to a local model or a cloud provider based on
+    the requested model name.
+
+servers:
+  - url: http://127.0.0.1:2525/v1
+    description: Local gateway (default port)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      description: Returns gateway status. Does not require authentication.
+      security: []
+      responses:
+        "200":
+          description: Gateway is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: "1.3.0"
+
+  /models:
+    get:
+      operationId: listModels
+      summary: List available models
+      description: >
+        Lists models currently loaded and running locally, plus any
+        models found on disk (but not yet running) and configured cloud
+        providers. Model IDs match directory names in your configured
+        models directory.
+      responses:
+        "200":
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: Llama-3.2-3B-Instruct-4bit
+                        object:
+                          type: string
+                          example: model
+                        created:
+                          type: integer
+                          example: 1700000000
+                        owned_by:
+                          type: string
+                          enum: [local, openai, anthropic, google, openrouter]
+
+  /chat/completions:
+    post:
+      operationId: createChatCompletion
+      summary: Create chat completion
+      description: >
+        OpenAI-compatible chat completions endpoint. Supports text,
+        image (VLM models only), streaming, tool calls, and cloud
+        routing by model prefix.
+
+
+        Routing resolution order (stops at first match):
+
+        1. **Local exact** — model name matches a key in `routes.json`
+        2. **Local substring** — name contains/is-contained by a local route key
+        3. **Cloud prefix** — `gpt-` → OpenAI, `claude-` → Anthropic, etc.
+        4. **Free Router** — falls through to OpenRouter if enabled
+        5. **Session stickiness** — reuses this session's previous backend
+        6. **Local default** — first running local model
+        7. **503** — nothing matched
+
+
+        Set `model: "auto"` to use the Auto-Router, which scores local
+        models by: multimodal need → context fit → coding/math intent.
+
+        Image requests to non-VLM models are rejected with a 400 error.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, messages]
+              properties:
+                model:
+                  type: string
+                  example: auto
+                  description: >
+                    Model name, `"auto"` for Auto-Router, or a cloud
+                    prefix like `"gpt-4o"`, `"claude-sonnet-4"`,
+                    `"gemini-2.0-flash"`, etc.
+                messages:
+                  type: array
+                  description: >
+                    Array of message objects. Content can be a string or
+                    an array of content blocks (text, image_url) for
+                    multimodal requests.
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [system, user, assistant, tool]
+                      content:
+                        oneOf:
+                          - type: string
+                          - type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  enum: [text, image_url]
+                                text:
+                                  type: string
+                                image_url:
+                                  type: object
+                                  properties:
+                                    url:
+                                      type: string
+                                      description: Base64 data URL or HTTP URL
+                temperature:
+                  type: number
+                  default: 0.0
+                top_p:
+                  type: number
+                  default: 1.0
+                top_k:
+                  type: integer
+                  default: 0
+                min_p:
+                  type: number
+                  default: 0.0
+                max_tokens:
+                  type: integer
+                  default: 512
+                stream:
+                  type: boolean
+                  default: false
+                stop:
+                  type: array
+                  items:
+                    type: string
+                  description: Stop sequences
+                tools:
+                  type: array
+                  description: Tool/function definitions
+                  items:
+                    type: object
+                x-session-id:
+                  type: string
+                  description: >
+                    Custom header for session stickiness. Subsequent
+                    requests with the same ID reuse the same backend.
+              example:
+                model: auto
+                messages:
+                  - role: user
+                    content: What is MLX?
+                stream: true
+      parameters:
+        - name: x-session-id
+          in: header
+          schema:
+            type: string
+          description: Session stickiness identifier
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          description: Bearer token (optional, only if guard is enabled)
+      responses:
+        "200":
+          description: Chat completion (or SSE stream if stream=true)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: chatcmpl-xxx
+                  object:
+                    type: string
+                    example: chat.completion
+                  choices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: integer
+                        message:
+                          type: object
+                          properties:
+                            role:
+                              type: string
+                              example: assistant
+                            content:
+                              type: string
+                              nullable: true
+                            tool_calls:
+                              type: array
+                        finish_reason:
+                          type: string
+                          example: stop
+                  usage:
+                    type: object
+                    properties:
+                      prompt_tokens:
+                        type: integer
+                      completion_tokens:
+                        type: integer
+                      total_tokens:
+                        type: integer
+        "400":
+          description: Invalid request (e.g., image sent to non-VLM model)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: No route available — no model running and no cloud provider configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /messages:
+    post:
+      operationId: createMessage
+      summary: Create message (Anthropic-compatible)
+      description: >
+        Accepts requests in Anthropic's Messages API shape. The gateway
+        translates the request to OpenAI format, dispatches it, then
+        translates the response back, including tool calls and
+        streaming events. Supports text content blocks, image content
+        blocks, tool_use, and tool_result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, messages, max_tokens]
+              properties:
+                model:
+                  type: string
+                  example: auto
+                  description: Model name, "auto", or cloud routing prefix
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        oneOf:
+                          - type: string
+                          - type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  enum: [text, image, tool_use, tool_result]
+                                text:
+                                  type: string
+                                source:
+                                  type: object
+                system:
+                  type: string
+                  description: Top-level system prompt
+                max_tokens:
+                  type: integer
+                stream:
+                  type: boolean
+                  default: false
+                temperature:
+                  type: number
+                top_p:
+                  type: number
+                top_k:
+                  type: integer
+                stop_sequences:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Message response (Anthropic format, or SSE stream)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                    example: message
+                  role:
+                    type: string
+                    example: assistant
+                  content:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: text
+                        text:
+                          type: string
+                  stop_reason:
+                    type: string
+                    example: end_turn
+                  usage:
+                    type: object
+                    properties:
+                      input_tokens:
+                        type: integer
+                      output_tokens:
+                        type: integer
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnthropicErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        Optional. Only required if you've enabled the Bearer-token guard
+        in Settings -> Network. Retrieve the key locally with:
+        defaults read com.lengtamlx.app apiKey
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+              example: invalid_request_error
+            param:
+              type: string
+              nullable: true
+            code:
+              type: string
+
+    AnthropicErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: error
+        error:
+          type: object
+          properties:
+            type:
+              type: string
+              example: api_error
+            message:
+              type: string

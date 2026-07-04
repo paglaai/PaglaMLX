@@ -1,0 +1,5 @@
+# Maps the "lengtamlx" api-name referenced in docs.yml to the OpenAPI spec.
+# Run `fern check` after cloning to validate this against your installed
+# Fern CLI version — the exact keys here can shift between CLI releases.
+name: lengtamlx
+spec: openapi/openapi.yml

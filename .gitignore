@@ -13,3 +13,4 @@ docs/build/
 docs/node_modules/
 docs/.docusaurus/
 docs/.cache/
+.zed/

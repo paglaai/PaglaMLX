@@ -1,0 +1,32 @@
+instances:
+  - url: lengtamlx.docs.buildwithfern.com
+
+title: PaglaMLX
+
+colors:
+  accentPrimary: "#1D9E75"
+  background: "#12151A"
+
+logo:
+  dark: ./assets/logo-dark.svg
+  light: ./assets/logo-light.svg
+
+navigation:
+  - section: Get started
+    contents:
+      - page: Introduction
+        path: pages/introduction.mdx
+      - page: Quickstart
+        path: pages/quickstart.mdx
+
+  - section: Concepts
+    contents:
+      - page: Model routing
+        path: pages/routing.mdx
+
+  - api: API reference
+    api-name: lengtamlx
+    snippets:
+      python: false
+      typescript: false
+      curl: true
