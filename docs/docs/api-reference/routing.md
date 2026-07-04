@@ -19,7 +19,7 @@ When `model=auto` is requested, the gateway runs a heuristic engine to pick the 
 | **Multimodal**         | +1000  | Image requests must go to a VLM (`modelType=VLM`) — non-VLM models are skipped entirely |
 | **Context fit**        | +50    | Estimated prompt tokens >50% of model context — snug fit preferred |
 |                        | +30    | Estimated tokens 20–50% of context — good fit   |
-|                        | +10    | Estimated tokens <20% — works but overkill      |
+|                        | +10    | Estimated tokens under 20% — works but overkill |
 | **Token overflow**     | skip   | Estimated tokens exceed context length — model cannot fit the prompt |
 | **Keyword intent**     | +20    | Code/math keywords detected — prefer capable models for technical work |
 |                        | +15    | Reasoning keywords detected                     |
