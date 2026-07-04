@@ -34,8 +34,8 @@ jobs:
       - run: npm run build
       - name: Override with static landing page
         run: |
-          cp static/index.html build/PaglaMLX/index.html
-          cp static/api-reference.html build/PaglaMLX/api-reference.html
+          cp static/index.html build/index.html
+          cp static/api-reference.html build/api-reference.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/build
