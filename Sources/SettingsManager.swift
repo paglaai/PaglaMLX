@@ -102,6 +102,27 @@ import SwiftUI
     var freeRouterEnabled: Bool {
         didSet { defaults.set(freeRouterEnabled, forKey: K.freeRouterEnabled) }
     }
+    var deepseekKey: String {
+        didSet { defaults.set(deepseekKey, forKey: K.deepseekKey) }
+    }
+    var mistralKey: String {
+        didSet { defaults.set(mistralKey, forKey: K.mistralKey) }
+    }
+    var perplexityKey: String {
+        didSet { defaults.set(perplexityKey, forKey: K.perplexityKey) }
+    }
+    var cohereKey: String {
+        didSet { defaults.set(cohereKey, forKey: K.cohereKey) }
+    }
+    var fireworksKey: String {
+        didSet { defaults.set(fireworksKey, forKey: K.fireworksKey) }
+    }
+    var hyperbolicKey: String {
+        didSet { defaults.set(hyperbolicKey, forKey: K.hyperbolicKey) }
+    }
+    var sambanovaKey: String {
+        didSet { defaults.set(sambanovaKey, forKey: K.sambanovaKey) }
+    }
 
     // MARK: KV Cache
 
@@ -205,6 +226,13 @@ import SwiftUI
         togetherKey       = d.string(forKey: K.togetherKey) ?? ""
         freeRouterKey     = d.string(forKey: K.freeRouterKey) ?? ""
         freeRouterEnabled = d.bool(forKey: K.freeRouterEnabled)
+        deepseekKey       = d.string(forKey: K.deepseekKey) ?? ""
+        mistralKey        = d.string(forKey: K.mistralKey) ?? ""
+        perplexityKey     = d.string(forKey: K.perplexityKey) ?? ""
+        cohereKey         = d.string(forKey: K.cohereKey) ?? ""
+        fireworksKey      = d.string(forKey: K.fireworksKey) ?? ""
+        hyperbolicKey     = d.string(forKey: K.hyperbolicKey) ?? ""
+        sambanovaKey      = d.string(forKey: K.sambanovaKey) ?? ""
         
         if let data = d.data(forKey: K.personas), let p = try? JSONDecoder().decode([Persona].self, from: data) {
             personas = p
@@ -283,6 +311,13 @@ import SwiftUI
         static let togetherKey       = "togetherKey"
         static let freeRouterKey     = "freeRouterKey"
         static let freeRouterEnabled = "freeRouterEnabled"
+        static let deepseekKey       = "deepseekKey"
+        static let mistralKey        = "mistralKey"
+        static let perplexityKey     = "perplexityKey"
+        static let cohereKey         = "cohereKey"
+        static let fireworksKey      = "fireworksKey"
+        static let hyperbolicKey     = "hyperbolicKey"
+        static let sambanovaKey      = "sambanovaKey"
         static let personas         = "personas"
         static let presets          = "presets"
     }

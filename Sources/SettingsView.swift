@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(SettingsManager.self) var settings
     @Environment(ModelOrchestrator.self) var orchestrator
     @Environment(TunnelManager.self) var tunnel
+    @Environment(CloudProviderHealth.self) var cloudHealth
     @State var integration = IntegrationManager.shared
 
     var body: some View {
@@ -328,16 +329,59 @@ struct SettingsView: View {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        ProviderRow(label: "Free Router", placeholder: "sk-or-... (free, no card needed)", key: $settings.freeRouterKey)
+                        ProviderRow(label: "OpenRouter", placeholder: "sk-or-... (free, no card)", providerId: "openrouter", key: $settings.freeRouterKey)
+                        divider
+                        ProviderRow(label: "Groq",        placeholder: "gsk_...",                   providerId: "groq",       key: $settings.groqKey)
+                        divider
+                        ProviderRow(label: "Together",    placeholder: "tgp_...",                   providerId: "together",   key: $settings.togetherKey)
+                        divider
+                        ProviderRow(label: "DeepSeek",    placeholder: "sk-...",                    providerId: "deepseek",   key: $settings.deepseekKey)
+                        divider
+                        ProviderRow(label: "Mistral",     placeholder: "U1kEM...",                  providerId: "mistral",    key: $settings.mistralKey)
+                        divider
+                        ProviderRow(label: "Perplexity",  placeholder: "pplx-...",                  providerId: "perplexity", key: $settings.perplexityKey)
+                        divider
+                        ProviderRow(label: "Cohere",      placeholder: "CO_KEY_...",                providerId: "cohere",     key: $settings.cohereKey)
+                        divider
+                        ProviderRow(label: "Fireworks",   placeholder: "fw_...",                    providerId: "fireworks",  key: $settings.fireworksKey)
+                        divider
+                        ProviderRow(label: "Hyperbolic",  placeholder: "eyJ...",                    providerId: "hyperbolic", key: $settings.hyperbolicKey)
+                        divider
+                        ProviderRow(label: "Sambanova",   placeholder: "ab1...",                    providerId: "sambanova",  key: $settings.sambanovaKey)
 
-                        Text("Set your OpenRouter API key here. When you send \"model=free\", PaglaMLX routes through OpenRouter — they pick the cheapest capable model for your request. Get a free key at openrouter.ai/keys (no credit card required).")
-                            .font(.custom("Lucida Grande", size: 12))
-                            .foregroundColor(Color(hex: "#a0a0a0"))
+                        HStack(spacing: 10) {
+                            Circle().fill(Color.green).frame(width: 6, height: 6)
+                            Text("Connected").font(DesignTokens.Font.caption2).foregroundColor(DesignTokens.Color.secondaryText)
+                            Circle().fill(Color.yellow).frame(width: 6, height: 6)
+                            Text("Low quota / rate limited").font(DesignTokens.Font.caption2).foregroundColor(DesignTokens.Color.secondaryText)
+                            Circle().fill(Color.red).frame(width: 6, height: 6)
+                            Text("Exhausted / invalid key").font(DesignTokens.Font.caption2).foregroundColor(DesignTokens.Color.secondaryText)
+                        }
+                        .padding(.top, 2)
+
+                        Text("When you send \"model=free\", PaglaMLX tries each configured free provider in random order until one responds. Add keys for any providers you want in the pool — leave the rest empty.")
+                            .font(DesignTokens.Font.caption)
+                            .foregroundColor(DesignTokens.Color.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } header: {
-                    Text("Free Router — Powered by OpenRouter")
-                        .font(.custom("Lucida Grande", size: 14.95))
+                    HStack {
+                        Text("Free Router — Multi-Provider Pool")
+                            .font(DesignTokens.Font.subheadline)
+                        Spacer()
+                        if cloudHealth.isRunning {
+                            ProgressView().controlSize(.small).scaleEffect(0.7)
+                        } else {
+                            Button {
+                                Task { await cloudHealth.checkAll() }
+                            } label: {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Check all provider connections")
+                        }
+                    }
                 }
 
                 Section {
@@ -351,11 +395,11 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
 
                     Text("Prefix your model name with \"gpt-\", \"claude-\", or \"gemini-\" to route directly.")
-                        .font(.custom("Lucida Grande", size: 13))
-                        .foregroundColor(Color(hex: "#a0a0a0"))
+                        .font(DesignTokens.Font.label)
+                        .foregroundColor(DesignTokens.Color.secondaryText)
                 } header: {
                     Text("Direct API Keys")
-                        .font(.custom("Lucida Grande", size: 14.95))
+                        .font(DesignTokens.Font.subheadline)
                 }
 
                 Section {
@@ -365,40 +409,41 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
 
                     Text("Prefix with \"openrouter/\" to pick a specific model. For automatic cheapest routing, use the Free Router key above with \"model=free\".")
-                        .font(.custom("Lucida Grande", size: 13))
-                        .foregroundColor(Color(hex: "#a0a0a0"))
+                        .font(DesignTokens.Font.label)
+                        .foregroundColor(DesignTokens.Color.secondaryText)
                 } header: {
                     Text("Advanced: OpenRouter (Direct)")
-                        .font(.custom("Lucida Grande", size: 14.95))
+                        .font(DesignTokens.Font.subheadline)
                 }
 
                 Section {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 10) {
                             keyDot(true)
-                            Text("Key set").font(.custom("Lucida Grande", size: 13))
+                            Text("Key set").font(DesignTokens.Font.label)
                             keyDot(false)
-                            Text("Key empty").font(.custom("Lucida Grande", size: 13))
+                            Text("Key empty").font(DesignTokens.Font.label)
                         }
-                        .foregroundColor(Color(hex: "#a0a0a0"))
+                        .foregroundColor(DesignTokens.Color.secondaryText)
 
-                        Text("model=\"auto\" uses heuristic engine: VLM for images → context-fit scoring → keyword intent (code/math/reasoning) → best local model. model=\"free\" routes through Free Router (OpenRouter).")
-                            .font(.custom("Lucida Grande", size: 13))
-                            .foregroundColor(Color(hex: "#a0a0a0"))
+                        Text("model=\"auto\" uses heuristic engine: VLM for images → context-fit scoring → keyword intent (code/math/reasoning) → best local model. model=\"free\" tries all configured free providers in failover chain (randomized, health-weighted).")
+                            .font(DesignTokens.Font.label)
+                            .foregroundColor(DesignTokens.Color.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } header: {
                     Text("Routing Behaviour")
-                        .font(.custom("Lucida Grande", size: 14.95))
+                        .font(DesignTokens.Font.subheadline)
                 }
             }
             }
-            .font(.custom("Lucida Grande", size: 13))
+            .font(DesignTokens.Font.label)
             .padding(20)
             .tabItem {
                 Label("Cloud", systemImage: "cloud.fill")
             }
             .tag(6)
+            .task { await cloudHealth.checkAll() }
             // MARK: 8. Integrations
             Form {
                 Section(header: Text("Auto-Configure Clients").font(.headline)) {
@@ -439,7 +484,7 @@ struct SettingsView: View {
             .tag(7)
             
             // MARK: 9. API Details
-            ApiDetailsTab(host: settings.host, port: settings.port, apiKey: settings.apiKey, allowedOrigins: settings.allowedOrigins, freeRouterEnabled: settings.freeRouterEnabled)
+            ApiDetailsTab()
                 .padding(20)
                 .tabItem {
                     Label("API Details", systemImage: "doc.text.magnifyingglass")
@@ -447,249 +492,37 @@ struct SettingsView: View {
                 .tag(8)
             
         }
-        .frame(width: 640, height: 520)
+        .frame(minWidth: 600, maxWidth: 680, minHeight: 480, idealHeight: 560)
     }
 }
 
 // MARK: - API Details Tab
 
 private struct ApiDetailsTab: View {
-    let host: String
-    let port: Int
-    let apiKey: String
-    let allowedOrigins: String
-    let freeRouterEnabled: Bool
-    
-    @State private var copied: String?
-    
-    private var baseURL: String { "http://\(host):\(port)" }
-    private var apiBase: String { "\(baseURL)/v1" }
-    
+    @Environment(SettingsManager.self) var settings
+    @Environment(ModelOrchestrator.self) var orchestrator
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                // 1. Connection Details
-                GroupBox(label: Label("Connection Details", systemImage: "network").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        copyRow("Base URL", apiBase)
-                        copyRow("API Key", apiKey)
-                        copyRow("CORS Origins", allowedOrigins)
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                // 2. Endpoints
-                GroupBox(label: Label("Available Endpoints", systemImage: "list.bullet").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        endpointRow("POST", "\(apiBase)/chat/completions", "OpenAI Chat")
-                        endpointRow("POST", "\(apiBase)/messages", "Anthropic Messages")
-                        endpointRow("GET",  "\(apiBase)/models", "List loaded models")
-                        endpointRow("GET",  "\(baseURL)/", "Health check")
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                // 3. curl Examples
-                GroupBox(label: Label("Quick Test (curl)", systemImage: "terminal").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        copyBlock(#"curl \#(baseURL)/"#)
-                        Text("→ {\"status\":\"ok\"}").font(.caption).foregroundColor(.secondary)
-                        
-                        copyBlock(#"curl \#(apiBase)/chat/completions \#(apiKeyHeader)"# + """
-                         \
-                          -H "Content-Type: application/json" \
-                          -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
-                        """)
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                // 4. Provider Configs
-                GroupBox(label: Label("Custom Provider Config", systemImage: "square.and.pencil").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        providerBlock("OpenAI-Compatible Client") {
-                            """
-                            Base URL: \(apiBase)
-                            API Key:  \(apiKey)
-                            Model:    auto
-                            """
-                        }
-                        
-                        providerBlock("VS Code (Copilot)") {
-                            #"""
-                            "github.copilot.advanced.debug.overrideProxyUrl": "\#(baseURL)",
-                            "debug.chatOverrideProxyUrl": "\#(baseURL)"
-                            """#
-                        }
-                        
-                        providerBlock("VS Code (Cline / Kilo)") {
-                            #"""
-                            "cline.apiBase": "\#(apiBase)",
-                            "cline.apiKey": "\#(apiKey)",
-                            "kilo.apiBase": "\#(apiBase)",
-                            "kilo.apiKey": "\#(apiKey)",
-                            "opencode.apiBase": "\#(apiBase)",
-                            "opencode.apiKey": "\#(apiKey)"
-                            """#
-                        }
-                        
-                        providerBlock("Continue.dev") {
-                            #"""
-                            {
-                              "models": [{
-                                "title": "PaglaMLX",
-                                "provider": "openai",
-                                "model": "AUTODETECT",
-                                "apiBase": "\#(apiBase)",
-                                "apiKey": "\#(apiKey)"
-                              }]
-                            }
-                            """#
-                        }
-                        
-                        providerBlock("Claude Desktop") {
-                            #"""
-                            "env": {
-                              "ANTHROPIC_BASE_URL": "\#(baseURL)",
-                              "ANTHROPIC_API_KEY": "\#(apiKey)"
-                            }
-                            """#
-                        }
-
-                        providerBlock("OpenClaw") {
-                            #"""
-                            {
-                              "models": {
-                                "providers": {
-                                  "lengtamlx": {
-                                    "baseUrl": "\#(apiBase)",
-                                    "apiKey": "\#(apiKey)",
-                                    "api": "openai-completions"
-                                  }
-                                }
-                              }
-                            }
-                            """#
-                        }
-
-                        providerBlock("Agent Hermes") {
-                            #"""
-                            model:
-                              provider: custom
-                              models:
-                                - name: PaglaMLX
-                                  model: auto
-                                  apiBase: \#(apiBase)
-                                  apiKey: \#(apiKey)
-                            """#
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                // 5. Routing Table
-                GroupBox(label: Label("Routing Table", systemImage: "arrow.triangle.branch").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        routeRow("auto", "Heuristic engine: VLM → context → intent → best local")
-                        routeRow("free", "OpenRouter auto (Free Router)")
-                        routeRow("gpt-* / o1 / o3", "OpenAI API")
-                        routeRow("claude-*", "Anthropic API")
-                        routeRow("gemini-*", "Gemini API")
-                        routeRow("openrouter/*", "OpenRouter (direct)")
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                // 6. Troubleshooting
-                GroupBox(label: Label("Troubleshooting", systemImage: "wrench").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        tipRow("Connection refused", "Gateway is not running. Press Play on a model first.")
-                        tipRow("401 Unauthorized", "Wrong API key. Check Settings → Network.")
-                        tipRow("503 Not found", "Model name not recognised. Use \"auto\".")
-                        tipRow("CORS error", "Set CORS Origins to \"*\" in Settings → Network.")
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
+        let runningModels: [(name: String, port: Int, modelType: String)] = orchestrator.instances.compactMap { name, inst in
+            inst.isRunning ? (name, inst.port, inst.model.modelType) : nil
         }
-    }
-    
-    // MARK: - Helpers
-    
-    private var apiKeyHeader: String {
-        apiKey.isEmpty ? "" : #"-H "Authorization: Bearer \#(apiKey)""#
-    }
-    
-    private func copyRow(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(label + ":").font(.caption).foregroundColor(.secondary).frame(width: 80, alignment: .trailing)
-            Text(value).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-            Spacer()
-            copyButton(value)
-        }
-    }
-    
-    private func endpointRow(_ method: String, _ url: String, _ desc: String) -> some View {
-        HStack(alignment: .top) {
-            Text(method).font(.system(.caption2, design: .monospaced)).foregroundColor(method == "GET" ? .green : .orange).frame(width: 38)
-            Text(url).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-            Spacer()
-            Text(desc).font(.caption2).foregroundColor(.secondary)
-            copyButton(url)
-        }
-    }
-    
-    private func copyBlock(_ text: String) -> some View {
-        HStack(alignment: .top) {
-            Text(text).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-                .padding(8)
-                .background(Color(.textBackgroundColor))
-                .cornerRadius(6)
-            copyButton(text)
-        }
-    }
-    
-    private func providerBlock(_ name: String, content: () -> String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(name).font(.caption).bold()
-            HStack(alignment: .top) {
-                Text(content()).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
-                    .padding(8)
-                    .background(Color(.textBackgroundColor))
-                    .cornerRadius(6)
-                copyButton(content())
-            }
-        }
-    }
-    
-    private func routeRow(_ prefix: String, _ dest: String) -> some View {
-        HStack {
-            Text(prefix).font(.system(.caption, design: .monospaced)).frame(width: 100, alignment: .leading)
-            Text("→").font(.caption).foregroundColor(.secondary)
-            Text(dest).font(.caption).foregroundColor(.secondary)
-        }
-    }
-    
-    private func tipRow(_ issue: String, _ fix: String) -> some View {
-        HStack(alignment: .top) {
-            Text(issue + ":").font(.caption).bold().frame(width: 130, alignment: .trailing)
-            Text(fix).font(.caption).foregroundColor(.secondary)
-        }
-    }
-    
-    private func copyButton(_ text: String) -> some View {
-        Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
-            copied = text
-            Task { try? await Task.sleep(for: .seconds(1.5)); copied = nil }
-        } label: {
-            Image(systemName: copied == text ? "checkmark" : "doc.on.doc")
-                .foregroundColor(copied == text ? .green : .secondary)
-                .font(.caption)
-        }
-        .buttonStyle(.plain)
-        .help("Copy")
+        ApiReferenceView(
+            host: settings.host,
+            port: settings.port,
+            apiKey: settings.apiKey,
+            allowedOrigins: settings.allowedOrigins,
+            freeRouterEnabled: settings.freeRouterEnabled,
+            temp: settings.temp,
+            topP: settings.topP,
+            topK: settings.topK,
+            minP: settings.minP,
+            maxTokens: settings.maxTokens,
+            logLevel: settings.logLevel.rawValue,
+            trustRemoteCode: settings.trustRemoteCode,
+            chatTemplateArgs: settings.chatTemplateArgs,
+            gatewayRunning: RoutingGateway.shared.isRunning,
+            runningModels: runningModels
+        )
     }
 }
 
@@ -698,41 +531,56 @@ private struct ApiDetailsTab: View {
 private struct ProviderRow: View {
     let label: String
     let placeholder: String
+    var providerId: String? = nil
     @Binding var key: String
+
+    @Environment(CloudProviderHealth.self) private var cloudHealth
 
     var body: some View {
         HStack(spacing: 6) {
-            keyDot(!key.isEmpty)
-                .frame(width: 6)
+            if let pid = providerId {
+                healthDot(for: pid)
+                    .frame(width: 6)
+            } else {
+                keyDot(!key.isEmpty)
+                    .frame(width: 6)
+            }
 
             Text(label + ":")
-                .font(.custom("Lucida Grande", size: 13))
-                .foregroundColor(Color(hex: "#000000"))
+                .font(DesignTokens.Font.label)
+                .foregroundStyle(.primary)
                 .frame(width: 82, alignment: .trailing)
 
             SecureField(placeholder, text: $key)
-                .font(.custom("Lucida Grande", size: 13))
+                .font(DesignTokens.Font.label)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(Color(hex: "#ffffff"))
+                .background(.background)
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color(hex: "#ebeef1"), lineWidth: 1)
+                        .stroke(DesignTokens.Color.border, lineWidth: 1)
                 )
         }
         .padding(.horizontal, 2)
         .padding(.vertical, 3)
     }
+
+    private func healthDot(for id: String) -> some View {
+        let health = cloudHealth.statuses[id]?.health ?? .notConfigured
+        return Circle()
+            .fill(health.dotColor)
+            .frame(width: 6, height: 6)
+    }
 }
 
 private var divider: some View {
-    Divider().overlay(Color(hex: "#ebeef1"))
+    Divider().overlay(DesignTokens.Color.border)
 }
 
 private func keyDot(_ filled: Bool) -> some View {
     Circle()
-        .fill(filled ? Color(hex: "#3366cc") : Color(hex: "#ebeef1"))
+        .fill(filled ? DesignTokens.Color.dotFilled : DesignTokens.Color.dotEmpty)
         .frame(width: 6, height: 6)
 }
 

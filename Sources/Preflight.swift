@@ -287,6 +287,56 @@ struct PortCheck: PreflightCheck {
     }
 }
 
+// MARK: - 7. Cloud Provider Health
+
+@MainActor
+struct CloudProvidersCheck: PreflightCheck {
+    let name = "Cloud Providers"
+
+    func run() async -> PreflightResult {
+        await CloudProviderHealth.shared.checkAll()
+
+        let configured = CloudProviderHealth.shared.statuses.values.filter {
+            $0.health != .notConfigured
+        }
+
+        guard !configured.isEmpty else {
+            return .init(check: name, status: .pass,
+                         message: "No cloud providers configured (local-only mode)",
+                         suggestion: nil)
+        }
+
+        let healthy   = configured.filter { $0.health == .ok }
+        let warning   = configured.filter { $0.health == .warning }
+        let failed    = configured.filter {
+            if case .exhausted = $0.health { return true }
+            if case .error = $0.health { return true }
+            return false
+        }
+
+        var parts: [String] = []
+        if !healthy.isEmpty { parts.append("\(healthy.count) connected") }
+        if !warning.isEmpty { parts.append("\(warning.count) degraded") }
+        if !failed.isEmpty  { parts.append("\(failed.count) failed") }
+
+        let detail = parts.joined(separator: ", ")
+
+        if !failed.isEmpty {
+            return .init(check: name, status: .warning,
+                         message: detail,
+                         suggestion: "Check your API keys in Settings → Cloud.")
+        }
+        if !warning.isEmpty {
+            return .init(check: name, status: .warning,
+                         message: detail,
+                         suggestion: nil)
+        }
+        return .init(check: name, status: .pass,
+                     message: detail,
+                     suggestion: nil)
+    }
+}
+
 // MARK: - Runner
 
 @MainActor
@@ -307,6 +357,7 @@ final class PreflightRunner {
             VirtualEnvCheck(),
             PackagesCheck(),
             PortCheck(),
+            CloudProvidersCheck(),
         ]
     }
 

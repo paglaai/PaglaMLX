@@ -6,6 +6,7 @@ struct MenuBarView: View {
     @Environment(RemoteAccessManager.self) var remoteAccess
     @Environment(\.openWindow) var openWindow
     @State private var benchmark = BenchmarkManager.shared
+    @State private var systemMonitor = SystemMonitorManager.shared
 
     var body: some View {
         @Bindable var orchestrator = orchestrator
@@ -22,14 +23,14 @@ struct MenuBarView: View {
 
                 let anyRunning = !orchestrator.instances.filter({ $0.value.isRunning }).isEmpty
                 Circle()
-                    .fill(anyRunning ? Color.green : Color.red)
+                    .fill(anyRunning ? DesignTokens.Color.success : DesignTokens.Color.error)
                     .frame(width: 8, height: 8)
                 Text(anyRunning ? "Running" : "Stopped")
                     .font(.subheadline)
-                    .foregroundColor(anyRunning ? .green : .red)
+                    .foregroundColor(anyRunning ? DesignTokens.Color.success : DesignTokens.Color.error)
             }
             .padding()
-            .background(Color(NSColor.windowBackgroundColor))
+            .background(Color(nsColor: .windowBackgroundColor))
 
             Divider()
 
@@ -66,7 +67,7 @@ struct MenuBarView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(isSelRunning ? .red : .blue)
+                .tint(isSelRunning ? DesignTokens.Color.destructive : DesignTokens.Color.accent)
                 .disabled(orchestrator.selectedModel == nil)
 
                 if let sel = orchestrator.selectedModel, isSelRunning {
@@ -125,6 +126,27 @@ struct MenuBarView: View {
             }
             .padding()
 
+            // MARK: System Status
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Image(systemName: "thermometer")
+                    .font(.caption2)
+                    .foregroundColor(systemMonitor.thermalLevel.color)
+                Text(systemMonitor.thermalLevel.rawValue)
+                    .font(DesignTokens.Font.caption2)
+                    .foregroundColor(systemMonitor.thermalLevel.color)
+
+                Spacer()
+
+                Image(systemName: "memorychip")
+                    .font(.caption2)
+                    .foregroundColor(systemMonitor.memoryPressureColor)
+                Text(String(format: "%.1f GB", systemMonitor.usedMemoryGB))
+                    .font(DesignTokens.Font.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
             Divider()
 
             // MARK: Actions
@@ -175,8 +197,10 @@ struct MenuBarView: View {
                 .keyboardShortcut("q", modifiers: .command)
             }
             .padding(.vertical, 8)
-            .background(Color(NSColor.windowBackgroundColor))
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(width: 300)
+        .onAppear { systemMonitor.startMonitoring() }
+        .onDisappear { systemMonitor.stopMonitoring() }
     }
 }

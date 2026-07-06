@@ -20,7 +20,7 @@ struct PaglaMLXApp: App {
                 .environment(settings)
                 .environment(remote)
                 .environment(tunnel)
-                .frame(minWidth: 720, minHeight: 520)
+                .frame(minWidth: 800, idealWidth: 960, minHeight: 600, idealHeight: 680)
                 .onChange(of: settings.hideDockIcon)     { _, _ in applyActivationPolicy() }
                 .onChange(of: settings.menuBarMode)      { _, _ in applyActivationPolicy() }
                 .onChange(of: settings.modelsDirectory)  { _, _ in orchestrator.scanModels() }

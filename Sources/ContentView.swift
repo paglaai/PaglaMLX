@@ -49,7 +49,7 @@ struct ContentView: View {
                                                 .frame(width: 7, height: 7)
                                             if inst.healthStatus != .healthy {
                                                 Text(inst.healthStatus.rawValue.prefix(1).uppercased())
-                                                    .font(.system(size: 7, design: .monospaced))
+                                                    .font(DesignTokens.Font.monospacedSmall)
                                                     .foregroundColor(inst.healthStatus.color)
                                             }
                                         }
@@ -70,151 +70,89 @@ struct ContentView: View {
                     .accessibilityLabel("Refresh Models")
                     .help("Rescan Models Directory")
                 }
+                ToolbarItem(placement: .automatic) {
+                    Button(action: { showingApiReference = true }) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                    }
+                    .accessibilityLabel("API Reference")
+                    .help("Show API reference & server details")
+                }
+            }
+            .sheet(isPresented: $showingApiReference) {
+                let runningModels: [(name: String, port: Int, modelType: String)] = orchestrator.instances.compactMap { name, inst in
+            inst.isRunning ? (name, inst.port, inst.model.modelType) : nil
+                }
+                ApiReferenceView(
+                    host: settings.host,
+                    port: settings.port,
+                    apiKey: settings.apiKey,
+                    allowedOrigins: settings.allowedOrigins,
+                    freeRouterEnabled: settings.freeRouterEnabled,
+                    temp: settings.temp,
+                    topP: settings.topP,
+                    topK: settings.topK,
+                    minP: settings.minP,
+                    maxTokens: settings.maxTokens,
+                    logLevel: settings.logLevel.rawValue,
+                    trustRemoteCode: settings.trustRemoteCode,
+                    chatTemplateArgs: settings.chatTemplateArgs,
+                    gatewayRunning: RoutingGateway.shared.isRunning,
+                    runningModels: runningModels
+                )
+                .frame(width: 700, height: 600)
             }
 
         } detail: {
             if let selectedModel = orchestrator.selectedModel {
                 detailView(selectedModel)
             } else {
-                serverDocPanel
+                noSelectionPanel
             }
         }
     }
 
-    // MARK: - Server Doc Panel
+    // MARK: - No Selection Panel
 
-    @State private var docCopied: String?
+    @State private var showingApiReference = false
+    @State private var noSelectionTab = 0
 
-    private var serverDocPanel: some View {
-        let baseURL = "http://\(settings.host):\(settings.port)"
-        let apiBase = "\(baseURL)/v1"
-        let keyLabel = settings.apiKey.isEmpty ? "(none set)" : settings.apiKey
-
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                GroupBox(label: Label("Connection Details", systemImage: "network").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        docRow("Base URL", apiBase)
-                        docRow("API Key", keyLabel)
-                        docRow("Port", "\(settings.port)")
-                        docRow("Host", settings.host)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                GroupBox(label: Label("Quick Test (curl)", systemImage: "terminal").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        docCopyBlock(#"curl \#(baseURL)/"#)
-                        Text("→ {\"status\":\"ok\"}").font(.caption).foregroundColor(.secondary)
-
-                        docCopyBlock(#"curl \#(apiBase)/chat/completions \#(apiKeyDocHeader)"# + """
-                         \
-                          -H "Content-Type: application/json" \
-                          -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
-                        """)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                GroupBox(label: Label("Provider Config", systemImage: "square.and.pencil").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        docProviderBlock("OpenAI-Compatible Client") {
-                            """
-                            Base URL: \(apiBase)
-                            API Key:  \(keyLabel)
-                            Model:    auto
-                            """
-                        }
-                        docProviderBlock("Claude Desktop") {
-                            #"""
-                            "env": {
-                              "ANTHROPIC_BASE_URL": "\#(baseURL)",
-                              "ANTHROPIC_API_KEY": "\#(settings.apiKey)"
-                            }
-                            """#
-                        }
-                        docProviderBlock("VS Code (settings.json)") {
-                            #"""
-                            "github.copilot.advanced.debug.overrideProxyUrl": "\#(baseURL)"
-                            """#
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                GroupBox(label: Label("Routing", systemImage: "arrow.triangle.branch").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        routeLine("auto", "Heuristic: VLM → context → intent → best local")
-                        routeLine("free", "OpenRouter auto (Free Router)")
-                        routeLine("gpt-*", "OpenAI")
-                        routeLine("claude-*", "Anthropic")
-                        routeLine("gemini-*", "Gemini")
-                        routeLine("openrouter/*", "OpenRouter direct")
-                    }
-                    .padding(.vertical, 4)
-                }
+    private var noSelectionPanel: some View {
+        VStack(spacing: 0) {
+            Picker("View", selection: $noSelectionTab) {
+                Text("Activity Dashboard").tag(0)
+                Text("API Reference").tag(1)
             }
-            .padding(20)
-        }
-    }
+            .pickerStyle(.segmented)
+            .padding()
 
-    private func docRow(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(label + ":").font(.caption).foregroundColor(.secondary).frame(width: 72, alignment: .trailing)
-            Text(value).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-            Spacer()
-            docCopyButton(value)
-        }
-    }
+            if noSelectionTab == 0 {
+                ActivityDashboardView()
+                    .environment(orchestrator)
+                    .environment(settings)
+            } else {
+                let runningModels: [(name: String, port: Int, modelType: String)] = orchestrator.instances.compactMap { name, inst in
+                    inst.isRunning ? (name, inst.port, inst.model.modelType) : nil
+                }
 
-    private func docCopyBlock(_ text: String) -> some View {
-        HStack(alignment: .top) {
-            Text(text).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-                .padding(8)
-                .background(Color(.textBackgroundColor))
-                .cornerRadius(6)
-            docCopyButton(text)
-        }
-    }
-
-    private func docProviderBlock(_ name: String, content: () -> String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(name).font(.caption).bold()
-            HStack(alignment: .top) {
-                Text(content()).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
-                    .padding(8)
-                    .background(Color(.textBackgroundColor))
-                    .cornerRadius(6)
-                docCopyButton(content())
+                ApiReferenceView(
+                    host: settings.host,
+                    port: settings.port,
+                    apiKey: settings.apiKey,
+                    allowedOrigins: settings.allowedOrigins,
+                    freeRouterEnabled: settings.freeRouterEnabled,
+                    temp: settings.temp,
+                    topP: settings.topP,
+                    topK: settings.topK,
+                    minP: settings.minP,
+                    maxTokens: settings.maxTokens,
+                    logLevel: settings.logLevel.rawValue,
+                    trustRemoteCode: settings.trustRemoteCode,
+                    chatTemplateArgs: settings.chatTemplateArgs,
+                    gatewayRunning: RoutingGateway.shared.isRunning,
+                    runningModels: runningModels
+                )
             }
         }
-    }
-
-    private func routeLine(_ prefix: String, _ dest: String) -> some View {
-        HStack {
-            Text(prefix).font(.system(.caption, design: .monospaced)).frame(width: 100, alignment: .leading)
-            Text("→").font(.caption).foregroundColor(.secondary)
-            Text(dest).font(.caption).foregroundColor(.secondary)
-        }
-    }
-
-    private var apiKeyDocHeader: String {
-        settings.apiKey.isEmpty ? "" : #"-H "Authorization: Bearer \#(settings.apiKey)""#
-    }
-
-    private func docCopyButton(_ text: String) -> some View {
-        Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
-            docCopied = text
-            Task { try? await Task.sleep(for: .seconds(1.5)); docCopied = nil }
-        } label: {
-            Image(systemName: docCopied == text ? "checkmark" : "doc.on.doc")
-                .foregroundColor(docCopied == text ? .green : .secondary)
-                .font(.caption)
-        }
-        .buttonStyle(.plain)
-        .help("Copy")
     }
 
     // MARK: - Detail
@@ -268,7 +206,7 @@ struct ContentView: View {
     private func headerBar(_ model: MLXModel, isRunning: Bool, healthStatus: ModelInstance.HealthStatus) -> some View {
         HStack {
             Circle()
-                .fill(isRunning ? healthStatus.color : Color.red)
+                .fill(isRunning ? healthStatus.color : DesignTokens.Color.error)
                 .frame(width: 10, height: 10)
 
             Text(isRunning ? healthStatus.rawValue.capitalized : "Stopped")
@@ -299,6 +237,18 @@ struct ContentView: View {
                 }
                 .help("Refresh health status")
                 .buttonStyle(.plain)
+
+                if !inst.warmPoolActive {
+                    Button(action: { inst.warm() }) {
+                        Image(systemName: "flame")
+                    }
+                    .help("Pre-heat model (warm pool)")
+                    .buttonStyle(.plain)
+                } else {
+                    Image(systemName: "flame.fill")
+                        .foregroundColor(.orange)
+                        .help("Warm pool active")
+                }
             }
 
             Button(action: { orchestrator.toggleSelected() }) {
@@ -306,10 +256,10 @@ struct ContentView: View {
                     .frame(width: 60)
             }
             .buttonStyle(.borderedProminent)
-            .tint(isRunning ? .red : .green)
+            .tint(isRunning ? DesignTokens.Color.destructive : DesignTokens.Color.success)
         }
         .padding()
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(.background)
     }
 
     // MARK: - Log Controls
@@ -324,7 +274,7 @@ struct ContentView: View {
                     .font(.system(.caption, design: .monospaced))
             }
             .padding(6)
-            .background(Color(.textBackgroundColor))
+            .background(Color(nsColor: .textBackgroundColor))
             .cornerRadius(6)
 
             HStack(spacing: 4) {
@@ -337,7 +287,7 @@ struct ContentView: View {
                         }
                     }) {
                         Text(level.label)
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(DesignTokens.Font.monospacedSmall)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(logLevelFilters.contains(level) ? level.color.opacity(0.2) : Color.clear)
@@ -355,7 +305,7 @@ struct ContentView: View {
 
                 if let inst = orchestrator.instances[orchestrator.selectedModel?.name ?? ""] {
                     Text("\(filtered(inst.logs).count)/\(inst.logs.count)")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(DesignTokens.Font.monospacedSmall)
                         .foregroundColor(.secondary)
                 }
             }
@@ -378,7 +328,7 @@ struct ContentView: View {
                 }
                 .padding()
             }
-            .background(Color(NSColor.textBackgroundColor))
+            .background(Color(nsColor: .textBackgroundColor))
             .onChange(of: logs.count) { _, _ in
                 if let last = logs.last {
                     proxy.scrollTo(last.id, anchor: .bottom)
@@ -406,7 +356,7 @@ struct ContentView: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.08))
+                    .background(DesignTokens.Color.warning.opacity(0.08))
                 }
                 .buttonStyle(.plain)
 
@@ -415,7 +365,7 @@ struct ContentView: View {
                         LazyVStack(alignment: .leading, spacing: 2) {
                             ForEach(errors.prefix(20), id: \.self) { err in
                                 Text(err)
-                                    .font(.system(size: 9, design: .monospaced))
+                                    .font(DesignTokens.Font.monospacedSmall)
                                     .foregroundColor(.secondary)
                                     .textSelection(.enabled)
                             }
@@ -485,7 +435,7 @@ struct ContentView: View {
                 Spacer()
             }
             .padding(8)
-            .background(Color.orange.opacity(0.1))
+            .background(DesignTokens.Color.warning.opacity(0.1))
         }
     }
 

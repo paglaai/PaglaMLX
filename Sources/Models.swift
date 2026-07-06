@@ -30,6 +30,7 @@ struct LogEntry: Identifiable, Equatable {
         case stderr
         case error
         case success
+        case warning
         case detail
 
         var label: String {
@@ -38,6 +39,7 @@ struct LogEntry: Identifiable, Equatable {
             case .stderr:  return "STDERR"
             case .error:   return "ERROR"
             case .success: return "OK"
+            case .warning: return "WARN"
             case .detail:  return "DETAIL"
             }
         }
@@ -48,6 +50,7 @@ struct LogEntry: Identifiable, Equatable {
             case .stderr:  return Color.orange
             case .error:   return Color.red
             case .success: return Color.green
+            case .warning: return Color.orange
             case .detail:  return Color.secondary
             }
         }
@@ -59,6 +62,7 @@ struct LogEntry: Identifiable, Equatable {
         case .stderr:  return Color.orange
         case .error:   return Color.red
         case .success: return Color.green
+        case .warning: return Color.orange
         case .detail:  return Color.secondary
         }
     }

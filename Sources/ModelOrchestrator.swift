@@ -37,7 +37,14 @@ import AppKit
 
     /// Callback fired when this instance terminates (used by orchestrator to update gateway).
     var onTermination: (() -> Void)?
-    
+
+    // Auto-restart state
+    private var restartCount = 0
+    private var restartBackoff: TimeInterval = 3
+    private let maxRestarts = 5
+
+    var warmPoolActive = false
+
     private var process: Process?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
@@ -95,11 +102,26 @@ import AppKit
         
         p.terminationHandler = { [weak self] proc in
             Task { @MainActor [weak self] in
-                self?.isRunning = false
+                guard let self else { return }
+                self.isRunning = false
                 let ok = proc.terminationStatus == 0
-                self?.append("Server exited (code \(proc.terminationStatus))",
+                self.append("Server exited (code \(proc.terminationStatus))",
                              level: ok ? .info : .error)
-                self?.onTermination?()
+                self.onTermination?()
+
+                if !ok && self.restartCount < self.maxRestarts {
+                    let delay = self.restartBackoff
+                    self.append("Auto-restart in \(Int(delay))s (attempt \(self.restartCount + 1)/\(self.maxRestarts))…",
+                                 level: .info)
+                    self.restartCount += 1
+                    self.restartBackoff = min(self.restartBackoff * 2, 60)
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    guard !self.isRunning else { return }
+                    self.start()
+                } else if !ok {
+                    self.append("Max restart attempts (\(self.maxRestarts)) reached. Manual intervention required.",
+                                 level: .error)
+                }
             }
         }
         
@@ -140,7 +162,40 @@ import AppKit
         stderrPipe?.fileHandleForReading.readabilityHandler = nil
         process = nil; stdoutPipe = nil; stderrPipe = nil
         isRunning = false
+        warmPoolActive = false
         append("⏹ Instance stopped.", level: .info)
+    }
+
+    func restart() {
+        restartCount = 0
+        restartBackoff = 3
+        stop()
+        start()
+    }
+
+    func warm() {
+        guard isRunning else { return }
+        warmPoolActive = true
+        Task {
+            let url = URL(string: "http://127.0.0.1:\(port)/v1/chat/completions")!
+            var req = URLRequest(url: url, timeoutInterval: 30)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = [
+                "model": model.name,
+                "messages": [["role": "user", "content": "Hello"]],
+                "max_tokens": 1
+            ]
+            req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            do {
+                let (_, resp) = try await URLSession.shared.data(for: req)
+                let ok = (resp as? HTTPURLResponse)?.statusCode == 200
+                append(ok ? "🔥 Warm pool active (model pre-heated)" : "⚠️ Warm request failed",
+                       level: ok ? .success : .warning)
+            } catch {
+                append("⚠️ Warm error: \(error.localizedDescription)", level: .error)
+            }
+        }
     }
     
     func clearLogs() { logs = [] }
@@ -189,7 +244,7 @@ import AppKit
     var instances: [String: ModelInstance] = [:]
     var errorMessage: String?
     
-    private var nextPort = 8000
+    private var nextPort = 2526
     private var healthTimer: Timer?
     
     // Fallback references for views migrating from ServerManager
@@ -238,6 +293,7 @@ import AppKit
         }
         
         newInstance.start()
+        newInstance.warm()
 
         startHealthPolling()
         updateGateway()

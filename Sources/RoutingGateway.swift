@@ -41,6 +41,13 @@ OAI_KEY = os.environ.get("OPENAI_KEY", "")
 GEM_KEY = os.environ.get("GEMINI_KEY", "")
 GROQ_KEY = os.environ.get("GROQ_KEY", "")
 TOGETHER_KEY = os.environ.get("TOGETHER_KEY", "")
+DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY", "")
+MISTRAL_KEY = os.environ.get("MISTRAL_KEY", "")
+PERPLEXITY_KEY = os.environ.get("PERPLEXITY_KEY", "")
+COHERE_KEY = os.environ.get("COHERE_KEY", "")
+FIREWORKS_KEY = os.environ.get("FIREWORKS_KEY", "")
+HYPERBOLIC_KEY = os.environ.get("HYPERBOLIC_KEY", "")
+SAMBANOVA_KEY = os.environ.get("SAMBANOVA_KEY", "")
 FREE_ROUTER = os.environ.get("FREE_ROUTER_ENABLED", "false").lower() == "true"
 
 ROUTING_FILE = os.path.expanduser("~/.lengtamlx/routes.json")
@@ -364,8 +371,8 @@ async def list_models():
             model_set[mid] = {"id": mid, "object": "model", "created": now_ts, "owned_by": "anthropic"}
     if GEM_KEY:
         model_set["gemini-2.0-flash"] = {"id": "gemini-2.0-flash", "object": "model", "created": now_ts, "owned_by": "google"}
-    if FREE_KEY:
-        model_set["free"] = {"id": "free", "object": "model", "created": now_ts, "owned_by": "openrouter"}
+    if has_any_free_key():
+        model_set["free"] = {"id": "free", "object": "model", "created": now_ts, "owned_by": "free_router"}
     if OR_KEY:
         model_set["openrouter/auto"] = {"id": "openrouter/auto", "object": "model", "created": now_ts, "owned_by": "openrouter"}
 
@@ -611,6 +618,93 @@ def auto_route(body, local_routes):
             sys.stderr.write(f"[auto-router] Image request but no VLM running. Available on disk: {', '.join(vlm_list)}\\n")
     return None
 
+# ---------------------------------------------------------------------------
+# Multi-Provider Free Router
+# ---------------------------------------------------------------------------
+
+FREE_PROVIDERS = [
+    ("openrouter", "https://openrouter.ai/api", "FREE_ROUTER_KEY", "openrouter/auto"),
+    ("groq", "https://api.groq.com/openai", "GROQ_KEY", "llama-3.3-70b-versatile"),
+    ("together", "https://api.together.xyz", "TOGETHER_KEY", "mistralai/Mixtral-8x22B-Instruct-v0.1"),
+    ("deepseek", "https://api.deepseek.com", "DEEPSEEK_KEY", "deepseek-chat"),
+    ("mistral", "https://api.mistral.ai", "MISTRAL_KEY", "mistral-small-latest"),
+    ("perplexity", "https://api.perplexity.ai", "PERPLEXITY_KEY", "sonar"),
+    ("cohere", "https://api.cohere.com", "COHERE_KEY", "command-r"),
+    ("fireworks", "https://api.fireworks.ai", "FIREWORKS_KEY", "accounts/fireworks/models/llama-v3p1-8b-instruct"),
+    ("hyperbolic", "https://api.hyperbolic.xyz", "HYPERBOLIC_KEY", "meta-llama/Llama-3.3-70B-Instruct"),
+    ("sambanova", "https://api.sambanova.ai", "SAMBANOVA_KEY", "Meta-Llama-3.3-70B-Instruct"),
+]
+
+free_provider_health = {}
+
+def init_free_provider_health():
+    for name, _, env_key, _ in FREE_PROVIDERS:
+        key = os.environ.get(env_key, "")
+        free_provider_health[name] = {
+            "successes": 0, "failures": 0, "cooldown_until": 0,
+            "configured": bool(key), "last_error": ""
+        }
+
+init_free_provider_health()
+
+def has_any_free_key():
+    return any(h["configured"] for h in free_provider_health.values())
+
+async def try_free_providers(path, body, fwd_headers):
+    \"\"\"Try each configured free provider in weighted-random order until one succeeds.\"\"\"
+    now = time.time()
+    eligible = []
+    for name, base_url, env_key, model in FREE_PROVIDERS:
+        key = os.environ.get(env_key, "")
+        if not key:
+            continue
+        health = free_provider_health[name]
+        if now < health["cooldown_until"]:
+            continue
+        eligible.append((name, base_url, env_key, model, health))
+    if not eligible:
+        return None, "No free providers are configured or available. Add API keys in Settings → Cloud."
+    random.shuffle(eligible)
+    eligible.sort(key=lambda x: x[4]["successes"] - x[4]["failures"] * 3, reverse=True)
+    last_error = ""
+    for name, base_url, env_key, model, health in eligible:
+        key = os.environ.get(env_key, "")
+        url = f"{base_url}/{path}"
+        headers = dict(fwd_headers)
+        headers["authorization"] = f"Bearer {key}"
+        headers.pop("x-api-key", None)
+        headers.pop("anthropic-version", None)
+        req_body = dict(body) if body else {}
+        req_body["model"] = model
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(url, headers=headers, json=req_body, timeout=60.0)
+                if resp.status_code == 200:
+                    health["successes"] += 1
+                    health["failures"] = max(0, health["failures"] - 1)
+                    health["cooldown_until"] = 0
+                    return resp, None
+                elif resp.status_code == 429:
+                    retry_after = int(resp.headers.get("retry-after", "30"))
+                    health["failures"] += 1
+                    cool = min(retry_after * health["failures"], 300)
+                    health["cooldown_until"] = now + cool
+                    health["last_error"] = "rate_limited"
+                    last_error = f"{name}: rate limited (retry-after={retry_after}s)"
+                else:
+                    health["failures"] += 1
+                    if health["failures"] >= 3:
+                        health["cooldown_until"] = now + 60
+                    health["last_error"] = f"HTTP_{resp.status_code}"
+                    last_error = f"{name}: HTTP {resp.status_code}"
+        except Exception as e:
+            health["failures"] += 1
+            if health["failures"] >= 3:
+                health["cooldown_until"] = now + 60
+            health["last_error"] = str(e)[:80]
+            last_error = f"{name}: {str(e)[:80]}"
+    return None, f"All free providers failed. Last error: {last_error}"
+
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 async def proxy(request: Request, path: str):
     if path.startswith("v1/messages"):
@@ -660,13 +754,24 @@ async def proxy(request: Request, path: str):
     elif model_name:
         name_lower = model_name.lower()
         
-        # model=free → Free Router via OpenRouter auto
-        if name_lower == "free" and FREE_KEY:
-            target_url = f"https://openrouter.ai/api/{path}"
-            fwd_headers["authorization"] = f"Bearer {FREE_KEY}"
-            if body and "model" in body:
-                body["model"] = "openrouter/auto"
-            fwd_headers["x-free-router"] = "openrouter"
+        # model=free → Multi-Provider Free Router failover chain
+        if name_lower == "free":
+            if not has_any_free_key():
+                return openai_error(
+                    "No free provider keys configured. Add at least one key in Settings → Cloud.",
+                    "free_router_unconfigured", 503
+                )
+            resp, err = await try_free_providers(path, body, fwd_headers)
+            if resp is None:
+                return openai_error(err, "free_router_error", 503)
+            async def free_stream():
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+            return StreamingResponse(
+                free_stream(),
+                status_code=resp.status_code,
+                headers=dict(resp.headers)
+            )
             
         elif name_lower.startswith("gpt-") or name_lower.startswith("o1") or name_lower.startswith("o3"):
             if OAI_KEY:
@@ -803,6 +908,13 @@ if __name__ == "__main__":
         env["TOGETHER_KEY"] = settings.togetherKey
         env["FREE_ROUTER_KEY"] = settings.freeRouterKey
         env["FREE_ROUTER_ENABLED"] = settings.freeRouterEnabled ? "true" : "false"
+        env["DEEPSEEK_KEY"] = settings.deepseekKey
+        env["MISTRAL_KEY"] = settings.mistralKey
+        env["PERPLEXITY_KEY"] = settings.perplexityKey
+        env["COHERE_KEY"] = settings.cohereKey
+        env["FIREWORKS_KEY"] = settings.fireworksKey
+        env["HYPERBOLIC_KEY"] = settings.hyperbolicKey
+        env["SAMBANOVA_KEY"] = settings.sambanovaKey
         env["MODELS_DIR"] = settings.modelsDirectory
         
         p.environment = env
