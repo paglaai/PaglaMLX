@@ -1,9 +1,7 @@
 import Foundation
-
-/// ReplayTests: Deterministic event stream replay validation
-/// Records N synthetic events → replays them → verifies ordering, count, and content integrity
-
 import XCTest
+
+@testable import PaglaMLX
 
 class EventReplayTests: XCTestCase {
     var recorder: EventRecorder!

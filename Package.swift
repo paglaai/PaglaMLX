@@ -11,6 +11,11 @@ let package = Package(
         .executableTarget(
             name: "PaglaMLX",
             path: "Sources"
+        ),
+        .testTarget(
+            name: "PaglaMLXTests",
+            dependencies: ["PaglaMLX"],
+            path: "Tests"
         )
     ]
 )

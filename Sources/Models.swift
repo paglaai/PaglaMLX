@@ -1,6 +1,136 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Event Types
+
+enum EventStatus: String, Codable, CaseIterable {
+    case success
+    case failed
+    case pending
+    case running
+}
+
+enum EventType: String, Codable, CaseIterable {
+    case request
+    case modelLoad
+    case modelUnload
+    case error
+    case system
+
+    var rawValueForJSON: String {
+        switch self {
+        case .request: return "request"
+        case .modelLoad: return "model_load"
+        case .modelUnload: return "model_unload"
+        case .error: return "error"
+        case .system: return "system"
+        }
+    }
+}
+
+struct GatewayEvent: Codable {
+    let timestamp: String
+    let eventType: EventType
+    let model: String
+    let requestID: String
+    let status: EventStatus
+    let durationMs: Int
+    let message: String?
+
+    enum CodingKeys: String, CodingKey {
+        case timestamp
+        case eventType = "event_type"
+        case model
+        case requestID = "request_id"
+        case status
+        case durationMs = "duration_ms"
+        case message
+    }
+}
+
+class EventRecorder {
+    private let eventFileURL: URL
+    private let queue = DispatchQueue(label: "com.lengtamlx.eventrecorder", qos: .utility)
+    private let isoFormatter = ISO8601DateFormatter()
+
+    init(customPath: URL? = nil) {
+        if let custom = customPath {
+            self.eventFileURL = custom
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            let lengtaDir = appSupport.appendingPathComponent("PaglaMLX", isDirectory: true)
+            self.eventFileURL = lengtaDir.appendingPathComponent("events.jsonl")
+        }
+
+        let dir = eventFileURL.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+    }
+
+    func record(
+        eventType: EventType,
+        model: String,
+        requestID: String,
+        status: EventStatus,
+        durationMs: Int,
+        message: String? = nil
+    ) {
+        let event = GatewayEvent(
+            timestamp: isoFormatter.string(from: Date()),
+            eventType: eventType,
+            model: model,
+            requestID: requestID,
+            status: status,
+            durationMs: durationMs,
+            message: message
+        )
+        append(event)
+    }
+
+    func recordModelLifecycle(action: LifecycleAction, model: String, durationMs: Int) {
+        let eventType: EventType = action == .load ? .modelLoad : .modelUnload
+        let status: EventStatus = .success
+        let event = GatewayEvent(
+            timestamp: isoFormatter.string(from: Date()),
+            eventType: eventType,
+            model: model,
+            requestID: "lifecycle_\(model)_\(action.rawValue)",
+            status: status,
+            durationMs: durationMs,
+            message: nil
+        )
+        append(event)
+    }
+
+    enum LifecycleAction: String {
+        case load
+        case unload
+    }
+
+    private func append(_ event: GatewayEvent) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            do {
+                let data = try JSONEncoder().encode(event)
+                var line = String(data: data, encoding: .utf8) ?? ""
+                line += "\n"
+                if let fileHandle = try? FileHandle(forWritingTo: self.eventFileURL) {
+                    fileHandle.seekToEndOfFile()
+                    if let lineData = line.data(using: .utf8) {
+                        fileHandle.write(lineData)
+                    }
+                    fileHandle.closeFile()
+                } else {
+                    try line.data(using: .utf8)?.write(to: self.eventFileURL)
+                }
+            } catch {
+                print("[EventRecorder] Failed to write event: \(error)")
+            }
+        }
+    }
+}
+
 // MARK: - MLXModel
 struct MLXModel: Identifiable, Hashable {
     var id: String { path }
