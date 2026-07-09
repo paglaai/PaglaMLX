@@ -32,6 +32,19 @@ jobs:
           cache-dependency-path: docs/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Copy wiki pages
+        run: |
+          mkdir -p build/wiki
+          if [ -d wiki ]; then
+            cp wiki/*.md build/wiki/ 2>/dev/null || echo "No wiki md files"
+          fi
+          # Convert wiki markdown to basic HTML for Pages
+          if command -v npx &>/dev/null && npx --yes markdown-to-html --help &>/dev/null 2>&1; then
+            for f in build/wiki/*.md; do
+              [ -f "$f" ] && npx --yes markdown-to-html "$f" > "${f%.md}.html" 2>/dev/null || true
+            done
+          fi
+
       - name: Override with static landing page
         run: |
           cp static/index.html build/index.html
