@@ -33,9 +33,9 @@ struct ContentView: View {
                                     .foregroundColor(model.modelType == "VLM" ? .blue : .primary)
 
                                 VStack(alignment: .leading) {
-                                    Text(model.name).font(.headline).lineLimit(1)
+                                    Text(model.name).font(DesignTokens.Font.headline).lineLimit(1)
                                     Text("\(model.sizeFormatted) • \(model.contextLength) ctx")
-                                        .font(.caption)
+                                        .font(DesignTokens.Font.caption)
                                         .foregroundColor(.secondary)
                                 }
 
@@ -210,14 +210,14 @@ struct ContentView: View {
                 .frame(width: 10, height: 10)
 
             Text(isRunning ? healthStatus.rawValue.capitalized : "Stopped")
-                .font(.headline)
+                .font(DesignTokens.Font.headline)
 
             Spacer()
 
             if isRunning {
                 let url = remoteAccess.bestRemoteURL ?? orchestrator.instances[model.name]?.serverURL ?? ""
                 Text(url)
-                    .font(.system(.subheadline, design: .monospaced))
+                    .font(DesignTokens.Font.monospacedSubhead)
                     .foregroundColor(.secondary)
                     .textSelection(.enabled)
 
@@ -265,15 +265,15 @@ struct ContentView: View {
     // MARK: - Log Controls
 
     private var logControls: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: DesignTokens.Spacing.sm) {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
                 TextField("Search logs…", text: $logSearch)
                     .textFieldStyle(.plain)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(DesignTokens.Font.monospacedCaption)
             }
-            .padding(6)
+            .padding(DesignTokens.Spacing.sm)
             .background(Color(nsColor: .textBackgroundColor))
             .cornerRadius(6)
 
@@ -320,7 +320,7 @@ struct ContentView: View {
                 LazyVStack(alignment: .leading, spacing: 4) {
                     ForEach(logs) { log in
                         Text(log.text)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(DesignTokens.Font.monospacedCaption)
                             .foregroundColor(log.color)
                             .id(log.id)
                             .textSelection(.enabled)
@@ -347,15 +347,15 @@ struct ContentView: View {
                 Button(action: { showingGatewayErrors.toggle() }) {
                     HStack {
                         Label("Gateway Errors (\(errors.count))", systemImage: "exclamationmark.triangle")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                            .font(DesignTokens.Font.caption)
+                            .foregroundColor(DesignTokens.Color.warning)
                         Spacer()
                         Image(systemName: showingGatewayErrors ? "chevron.down" : "chevron.right")
-                            .font(.caption)
+                            .font(DesignTokens.Font.caption)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(DesignTokens.Color.warning.opacity(0.08))
                 }
                 .buttonStyle(.plain)
@@ -370,8 +370,8 @@ struct ContentView: View {
                                     .textSelection(.enabled)
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, DesignTokens.Spacing.lg)
+                        .padding(.vertical, DesignTokens.Spacing.xs)
                     }
                     .frame(maxHeight: 100)
                 }
@@ -382,11 +382,11 @@ struct ContentView: View {
     // MARK: - Benchmark
 
     private func benchmarkPanel(_ model: MLXModel, isRunning: Bool) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: DesignTokens.Spacing.xs) {
             Divider()
             HStack {
                 Label("Benchmark", systemImage: "gauge")
-                    .font(.caption)
+                    .font(DesignTokens.Font.caption)
                     .foregroundColor(.secondary)
 
                 if benchmark.isRunning {
@@ -394,7 +394,7 @@ struct ContentView: View {
                         .controlSize(.small)
                         .scaleEffect(0.7)
                     Text(benchmark.currentProgress)
-                        .font(.caption2)
+                        .font(DesignTokens.Font.caption2)
                         .foregroundColor(.secondary)
                 }
 
@@ -402,10 +402,10 @@ struct ContentView: View {
 
                 if let last = benchmark.results.first(where: { $0.modelName == model.name }) {
                     Text("\(String(format: "%.1f", last.tokensPerSecond)) tok/s")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(DesignTokens.Font.monospacedCaption)
                         .foregroundColor(.secondary)
                     Text("\(String(format: "%.0f", last.latencyMs)) ms")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(DesignTokens.Font.monospacedCaption)
                         .foregroundColor(.secondary)
                 }
 
@@ -417,8 +417,8 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.vertical, DesignTokens.Spacing.sm)
         }
     }
 
@@ -429,12 +429,12 @@ struct ContentView: View {
         if let err = orchestrator.errorMessage {
             HStack {
                 Label(err, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
+                    .font(DesignTokens.Font.caption)
                     .foregroundStyle(.orange)
                     .symbolRenderingMode(.hierarchical)
                 Spacer()
             }
-            .padding(8)
+            .padding(DesignTokens.Spacing.md)
             .background(DesignTokens.Color.warning.opacity(0.1))
         }
     }

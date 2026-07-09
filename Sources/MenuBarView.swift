@@ -18,7 +18,7 @@ struct MenuBarView: View {
             // MARK: Header
             HStack {
                 Text("PaglaMLX")
-                    .font(.headline)
+                    .font(DesignTokens.Font.headline)
                 Spacer()
 
                 let anyRunning = !orchestrator.instances.filter({ $0.value.isRunning }).isEmpty
@@ -26,7 +26,7 @@ struct MenuBarView: View {
                     .fill(anyRunning ? DesignTokens.Color.success : DesignTokens.Color.error)
                     .frame(width: 8, height: 8)
                 Text(anyRunning ? "Running" : "Stopped")
-                    .font(.subheadline)
+                    .font(DesignTokens.Font.subheadline)
                     .foregroundColor(anyRunning ? DesignTokens.Color.success : DesignTokens.Color.error)
             }
             .padding()
@@ -73,12 +73,12 @@ struct MenuBarView: View {
                 if let sel = orchestrator.selectedModel, isSelRunning {
                     HStack {
                         Text("URL:")
-                            .font(.caption)
+                            .font(DesignTokens.Font.caption)
                             .foregroundColor(.secondary)
 
                         let url = remoteAccess.bestRemoteURL ?? orchestrator.instances[sel.name]?.serverURL ?? ""
                         Text(url)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(DesignTokens.Font.monospacedCaption)
                         Spacer()
                         Button(action: {
                             NSPasteboard.general.clearContents()
@@ -99,28 +99,28 @@ struct MenuBarView: View {
                                 .fill(instance.healthStatus.color)
                                 .frame(width: 6, height: 6)
                             Text(instance.healthStatus.rawValue.capitalized)
-                                .font(.caption2)
-                                .foregroundColor(instance.healthStatus.color)
+                                    .font(DesignTokens.Font.caption2)
+                                    .foregroundColor(instance.healthStatus.color)
 
-                            Spacer()
+                                Spacer()
 
-                            if let last = benchmark.results.first(where: { $0.modelName == sel.name }) {
-                                Text("\(String(format: "%.1f", last.tokensPerSecond)) t/s")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                                if let last = benchmark.results.first(where: { $0.modelName == sel.name }) {
+                                    Text("\(String(format: "%.1f", last.tokensPerSecond)) t/s")
+                                        .font(DesignTokens.Font.caption2)
+                                        .foregroundColor(.secondary)
+                                }
 
-                            Button(action: {
-                                benchmark.runBenchmark(model: sel, port: instance.port, apiKey: settings.apiKey)
-                            }) {
-                                Image(systemName: "gauge")
-                                    .font(.caption)
-                            }
-                            .disabled(benchmark.isRunning)
+                                Button(action: {
+                                    benchmark.runBenchmark(model: sel, port: instance.port, apiKey: settings.apiKey)
+                                }) {
+                                    Image(systemName: "gauge")
+                                        .font(DesignTokens.Font.caption2)
+                                }
+                                .disabled(benchmark.isRunning)
                             .buttonStyle(.plain)
                             .help("Run benchmark")
                         }
-                        .padding(.top, 2)
+                        .padding(.top, DesignTokens.Spacing.xs)
                     }
                 }
             }

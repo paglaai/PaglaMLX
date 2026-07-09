@@ -29,10 +29,15 @@ enum DesignTokens {
         static let body       = SwiftUI.Font.body
         static let callout    = SwiftUI.Font.callout
 
-        static let monospacedCaption = SwiftUI.Font.system(.caption, design: .monospaced)
-        static let monospacedSmall   = SwiftUI.Font.system(size: 9, design: .monospaced)
-        static let monospacedBody    = SwiftUI.Font.system(.body, design: .monospaced)
-        static let monospacedSubhead = SwiftUI.Font.system(.subheadline, design: .monospaced)
+        static let monospacedCaption    = SwiftUI.Font.system(.caption, design: .monospaced)
+        static let monospacedSmall      = SwiftUI.Font.system(size: 9, design: .monospaced)
+        static let monospacedTiny       = SwiftUI.Font.system(size: 10, design: .monospaced)
+        static let monospacedBody       = SwiftUI.Font.system(.body, design: .monospaced)
+        static let monospacedSubhead    = SwiftUI.Font.system(.subheadline, design: .monospaced)
+        static let monospacedTitle2Bold = SwiftUI.Font.system(.title2, design: .monospaced).bold()
+
+        static let title2    = SwiftUI.Font.title2
+        static let largeIcon = SwiftUI.Font.system(size: 36)
     }
 
     // MARK: - Spacing (8px grid)

@@ -2,7 +2,7 @@
 
 **Local LLM orchestration for Apple Silicon.**
 
-PaglaMLX is a native macOS menu-bar application that manages and serves MLX-compatible language models through a smart reverse proxy. No command line needed.
+**PaglaMLX** is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. It manages background model server processes and runs a smart reverse proxy gateway at `127.0.0.1:2525/v1` that speaks both OpenAI and Anthropic API formats natively. Point any compatible developer client (like VS Code, Claude Desktop, or Continue) at the gateway to route requests dynamically to your active local model, or fall back to cloud providers when needed.
 
 ## Key capabilities
 
