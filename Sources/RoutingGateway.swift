@@ -50,9 +50,93 @@ HYPERBOLIC_KEY = os.environ.get("HYPERBOLIC_KEY", "")
 SAMBANOVA_KEY = os.environ.get("SAMBANOVA_KEY", "")
 FREE_ROUTER = os.environ.get("FREE_ROUTER_ENABLED", "false").lower() == "true"
 
+MTPLX_PORT = 8000
+VLLM_PORT = 8001
+MLX_LM_PORT = 8080
+
+def is_external_model(model_name):
+    if not model_name:
+        return False
+    name_lower = model_name.lower()
+    if name_lower == "free":
+        return True
+    if name_lower.startswith("gpt-") or name_lower.startswith("o1") or name_lower.startswith("o3"):
+        return True
+    if name_lower.startswith("claude-"):
+        return True
+    if name_lower.startswith("gemini-"):
+        return True
+    if name_lower.startswith("openrouter/"):
+        return True
+    return False
+
+def smart_route(body, headers):
+    if body and has_image_content(body):
+        return VLLM_PORT
+    
+    agent_count_hdr = headers.get("x-agent-count")
+    swarm_mode_hdr = headers.get("x-swarm-mode", "").lower()
+    
+    is_swarm = False
+    if swarm_mode_hdr == "true":
+        is_swarm = True
+    elif agent_count_hdr:
+        try:
+            if int(agent_count_hdr) > 1:
+                is_swarm = True
+        except ValueError:
+            pass
+            
+    if is_swarm:
+        return VLLM_PORT
+        
+    if body and "tools" in body and body["tools"]:
+        return MTPLX_PORT
+        
+    return MTPLX_PORT
+
 ROUTING_FILE = os.path.expanduser("~/.lengtamlx/routes.json")
+EVENTS_FILE = os.path.expanduser("~/.lengtamlx/events.jsonl")
 
 session_routes = {}
+
+# ---------------------------------------------------------------------------
+# Event Logging
+# ---------------------------------------------------------------------------
+
+import threading
+import uuid as _uuid
+
+def _ensure_events_dir():
+    d = os.path.dirname(EVENTS_FILE)
+    os.makedirs(d, exist_ok=True)
+
+_events_lock = threading.Lock()
+
+def record_event(event_type, model, request_id, status, duration_ms, message=None):
+    def _write():
+        event = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "event_type": event_type,
+            "model": model,
+            "request_id": request_id,
+            "status": status,
+            "duration_ms": duration_ms,
+        }
+        if message is not None:
+            event["message"] = message
+        line = json.dumps(event) + "\n"
+        with _events_lock:
+            try:
+                _ensure_events_dir()
+                with open(EVENTS_FILE, "a", encoding="utf-8") as f:
+                    f.write(line)
+            except Exception as exc:
+                sys.stderr.write(f"[events] write failed: {exc}\n")
+    t = threading.Thread(target=_write, daemon=True)
+    t.start()
+
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -382,6 +466,38 @@ async def list_models():
 # Anthropic /v1/messages endpoint (native translation)
 # ---------------------------------------------------------------------------
 
+async def pass_through_anthropic(client, url, headers, body, model_name, req_id=None, t0=None):
+    if req_id is None:
+        req_id = str(_uuid.uuid4())[:8]
+    if t0 is None:
+        t0 = time.time()
+    
+    is_stream = body.get("stream", False)
+    req = client.build_request("POST", url, headers=headers, json=body)
+    
+    if is_stream:
+        response = await client.send(req, stream=True)
+        if response.status_code != 200:
+            _dur = int((time.time() - t0) * 1000)
+            record_event("request", model_name, req_id, "failed", _dur, f"HTTP {response.status_code}")
+            return anthropic_error("api_error", f"Upstream model error (HTTP {response.status_code})")
+            
+        async def generator():
+            async for chunk in response.aiter_bytes():
+                yield chunk
+            _dur = int((time.time() - t0) * 1000)
+            record_event("request", model_name, req_id, "success", _dur)
+            
+        return StreamingResponse(generator(), status_code=200, media_type="text/event-stream")
+    else:
+        response = await client.send(req, stream=False)
+        _dur = int((time.time() - t0) * 1000)
+        if response.status_code != 200:
+            record_event("request", model_name, req_id, "failed", _dur, f"HTTP {response.status_code}")
+            return anthropic_error("api_error", f"Upstream model error (HTTP {response.status_code})")
+        record_event("request", model_name, req_id, "success", _dur)
+        return Response(content=response.content, status_code=200, media_type="application/json")
+
 @app.post("/v1/messages")
 async def anthropic_messages(request: Request):
     try:
@@ -389,14 +505,28 @@ async def anthropic_messages(request: Request):
     except Exception:
         return anthropic_error("invalid_request_error", "Invalid JSON body")
 
-    local_routes = get_local_routes()
+    local_routes = normalize_routes(get_local_routes())
     model_name = body.get("model", "default")
 
     port = target_for_model(local_routes, model_name)
     if port is None:
-        port = first_local_port(local_routes)
-    if port is None:
-        return anthropic_error("api_error", "No local model is running. Start a model first.")
+        port = smart_route(body, request.headers)
+
+    if port == MTPLX_PORT:
+        target_url = f"http://127.0.0.1:{MTPLX_PORT}/v1/messages"
+        fwd_headers = {"Content-Type": "application/json"}
+        if API_KEY:
+            fwd_headers["Authorization"] = f"Bearer {API_KEY}"
+        
+        client = httpx.AsyncClient(timeout=None)
+        _req_id = str(_uuid.uuid4())[:8]
+        _t0 = time.time()
+        try:
+            return await pass_through_anthropic(client, target_url, fwd_headers, body, model_name, _req_id, _t0)
+        except Exception as e:
+            _dur = int((time.time() - _t0) * 1000)
+            record_event("request", model_name, _req_id, "failed", _dur, str(e)[:120])
+            return anthropic_error("api_error", f"MTPLX connection error: {str(e)}")
 
     target_url = f"http://127.0.0.1:{port}/v1/chat/completions"
     oaibody = translate_anthropic_messages(body)
@@ -407,30 +537,42 @@ async def anthropic_messages(request: Request):
         oai_headers["Authorization"] = f"Bearer {API_KEY}"
 
     client = httpx.AsyncClient(timeout=None)
+    _req_id = str(_uuid.uuid4())[:8]
+    _t0 = time.time()
 
     try:
         if is_stream:
-            return await stream_anthropic(client, target_url, oai_headers, oaibody, model_name)
+            return await stream_anthropic(client, target_url, oai_headers, oaibody, model_name, _req_id, _t0)
         else:
-            return await nonstream_anthropic(client, target_url, oai_headers, oaibody, model_name)
+            return await nonstream_anthropic(client, target_url, oai_headers, oaibody, model_name, _req_id, _t0)
     except httpx.HTTPStatusError as e:
-        sys.stderr.write(f"MLX server HTTP error: {e.response.status_code}\\n")
+        _dur = int((time.time() - _t0) * 1000)
+        record_event("request", model_name, _req_id, "failed", _dur, f"HTTP {e.response.status_code}")
+        sys.stderr.write(f"MLX server HTTP error: {e.response.status_code}\n")
         return anthropic_error("api_error", f"Upstream model error (HTTP {e.response.status_code})")
     except httpx.ConnectError:
-        return anthropic_error("api_error", "Cannot connect to local MLX server. It may have crashed.")
+        _dur = int((time.time() - _t0) * 1000)
+        record_event("request", model_name, _req_id, "failed", _dur, "connect_error")
+        return anthropic_error("api_error", f"Cannot connect to local backend server at port {port}.")
     except Exception as e:
-        sys.stderr.write(f"Anthropic proxy error: {e}\\n")
+        _dur = int((time.time() - _t0) * 1000)
+        record_event("request", model_name, _req_id, "failed", _dur, str(e)[:120])
+        sys.stderr.write(f"Anthropic proxy error: {e}\n")
         return anthropic_error("api_error", f"Internal proxy error: {str(e)}")
 
 
-async def stream_anthropic(client, url, headers, oaibody, model_name):
+async def stream_anthropic(client, url, headers, oaibody, model_name, req_id=None, t0=None):
+    if req_id is None:
+        req_id = str(_uuid.uuid4())[:8]
+    if t0 is None:
+        t0 = time.time()
     req = client.build_request("POST", url, headers=headers, json=oaibody)
     response = await client.send(req, stream=True)
 
     state = {"text_started": False, "tool_indices": set()}
 
     async def generator():
-        yield 'event: message_start\\ndata: {}\\n\\n'.format(json.dumps({
+        yield 'event: message_start\ndata: {}\n\n'.format(json.dumps({
             "type": "message_start",
             "message": {
                 "id": "msg_0000000000",
@@ -455,17 +597,26 @@ async def stream_anthropic(client, url, headers, oaibody, model_name):
             except json.JSONDecodeError:
                 continue
             for event in translate_stream_chunk(data, model_name, state):
-                yield event + "\\n"
+                yield event + "\n"
+        _dur = int((time.time() - t0) * 1000)
+        record_event("request", model_name, req_id, "success", _dur)
 
     return StreamingResponse(generator(), media_type="text/event-stream")
 
 
-async def nonstream_anthropic(client, url, headers, oaibody, model_name):
+async def nonstream_anthropic(client, url, headers, oaibody, model_name, req_id=None, t0=None):
+    if req_id is None:
+        req_id = str(_uuid.uuid4())[:8]
+    if t0 is None:
+        t0 = time.time()
     response = await client.post(url, headers=headers, json=oaibody)
+    _dur = int((time.time() - t0) * 1000)
     if response.status_code != 200:
+        record_event("request", model_name, req_id, "failed", _dur, f"HTTP {response.status_code}")
         return anthropic_error("api_error", f"Model returned HTTP {response.status_code}")
     data = response.json()
     anthropic_data = translate_nonstream_response(data, model_name)
+    record_event("request", model_name, req_id, "success", _dur)
     return Response(content=json.dumps(anthropic_data), media_type="application/json")
 
 
@@ -742,13 +893,12 @@ async def proxy(request: Request, path: str):
         if body is not None:
             body["model"] = "default_model"
     
-    # 1b. Auto-Router: heuristic for model=auto
-    elif model_name and model_name.lower() == "auto":
-        auto_port = auto_route(body, local_routes)
-        if auto_port:
-            target_url = f"http://127.0.0.1:{auto_port}/{path}"
-            if body is not None:
-                body["model"] = "default_model"
+    # 1b. Auto-Router: heuristic for model=auto or unknown local model
+    elif model_name and (model_name.lower() == "auto" or (model_name not in local_routes and not is_external_model(model_name))):
+        target_port = smart_route(body, request.headers)
+        target_url = f"http://127.0.0.1:{target_port}/{path}"
+        if body is not None:
+            body["model"] = "default_model"
     
     # 2. Heuristics for external APIs
     elif model_name:
@@ -813,9 +963,12 @@ async def proxy(request: Request, path: str):
             body["model"] = "default_model"
         
     # 4. Local Default Fallback
-    if not target_url and local_routes:
-        port = list(local_routes.values())[0]["port"]
-        target_url = f"http://127.0.0.1:{port}/{path}"
+    if not target_url:
+        if local_routes:
+            port = list(local_routes.values())[0]["port"]
+            target_url = f"http://127.0.0.1:{port}/{path}"
+        else:
+            target_url = f"http://127.0.0.1:{MTPLX_PORT}/{path}"
         if body is not None:
             body["model"] = "default_model"
 
@@ -826,7 +979,7 @@ async def proxy(request: Request, path: str):
         except (ValueError, IndexError):
             target_port = None
         if target_port is not None:
-            is_vlm = any(
+            is_vlm = target_port == VLLM_PORT or any(
                 isinstance(info, dict) and info.get("port") == target_port and info.get("model_type") == "VLM"
                 for info in local_routes.values()
             )
@@ -851,6 +1004,9 @@ async def proxy(request: Request, path: str):
         session_routes[session_id]["x-api-key"] = xak_val
     
     client = httpx.AsyncClient(timeout=None)
+    _req_id = str(_uuid.uuid4())[:8]
+    _t0 = time.time()
+    _model_name = model_name or "local"
     
     try:
         if body is not None:
@@ -859,10 +1015,14 @@ async def proxy(request: Request, path: str):
             req = client.build_request(request.method, target_url, headers=fwd_headers, content=request.stream())
             
         response = await client.send(req, stream=True)
+        _status_code = response.status_code
         
         async def stream_generator():
             async for chunk in response.aiter_bytes():
                 yield chunk
+            _dur = int((time.time() - _t0) * 1000)
+            _ev_status = "success" if _status_code < 400 else "failed"
+            record_event("request", _model_name, _req_id, _ev_status, _dur)
                 
         return StreamingResponse(
             stream_generator(),
@@ -870,11 +1030,16 @@ async def proxy(request: Request, path: str):
             headers=dict(response.headers)
         )
     except httpx.HTTPStatusError as e:
+        _dur = int((time.time() - _t0) * 1000)
+        record_event("request", _model_name, _req_id, "failed", _dur, f"HTTP {e.response.status_code}")
         sys.stderr.write(f"HTTP error from {target_url}: {e.response.status_code}\\n")
         return openai_error(f"Upstream provider returned HTTP {e.response.status_code}", "upstream_error", 502)
     except Exception as e:
+        _dur = int((time.time() - _t0) * 1000)
+        record_event("request", _model_name, _req_id, "failed", _dur, str(e)[:120])
         sys.stderr.write(f"Proxy error connecting to {target_url}: {str(e)}\\n")
         return openai_error(f"Proxy error: {str(e)}", "proxy_error", 502)
+
 
 if __name__ == "__main__":
     port = int(sys.argv[1])

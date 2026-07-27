@@ -108,6 +108,12 @@ class EventRecorder {
         case unload
     }
 
+    /// Blocks the calling thread until all previously enqueued writes have finished.
+    /// Use in tests to ensure the file is complete before reading.
+    func flush() {
+        queue.sync {}
+    }
+
     private func append(_ event: GatewayEvent) {
         queue.async { [weak self] in
             guard let self = self else { return }

@@ -24,6 +24,7 @@ struct PaglaMLXApp: App {
                 .onChange(of: settings.hideDockIcon)     { _, _ in applyActivationPolicy() }
                 .onChange(of: settings.menuBarMode)      { _, _ in applyActivationPolicy() }
                 .onChange(of: settings.modelsDirectory)  { _, _ in orchestrator.scanModels() }
+                .onAppear { EventLogWatcher.shared.start() }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)

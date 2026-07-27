@@ -34,7 +34,8 @@ class EventReplayTests: XCTestCase {
             status: .success,
             durationMs: 1250
         )
-        
+        recorder.flush()
+
         let events = try reader.readAll()
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(events[0].model, "llama-2-7b")
@@ -51,7 +52,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: Int.random(in: 100...5000)
             )
         }
-        
+        recorder.flush()
+
         let events = try reader.readAll()
         XCTAssertEqual(events.count, 10)
     }
@@ -78,7 +80,8 @@ class EventReplayTests: XCTestCase {
             
             recordedSequence.append((id: eventID, timestamp: "", model: model))
         }
-        
+        recorder.flush()
+
         // Phase 2: Replay - read all events back
         let replayedEvents = try reader.readAll()
         
@@ -119,7 +122,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 100
             )
         }
-        
+        recorder.flush()
+
         let gpt4Events = try reader.query(model: "gpt-4")
         XCTAssertEqual(gpt4Events.count, 10, "Expected 10 gpt-4 events")
         XCTAssertTrue(gpt4Events.allSatisfy { $0.model == "gpt-4" })
@@ -135,7 +139,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 100
             )
         }
-        
+        recorder.flush()
+
         let successEvents = try reader.query(status: .success)
         let failedEvents = try reader.query(status: .failed)
         
@@ -158,7 +163,8 @@ class EventReplayTests: XCTestCase {
         }
         
         recorder.recordModelLifecycle(action: .unload, model: "model-1", durationMs: 200)
-        
+        recorder.flush()
+
         let loadEvents = try reader.query(eventType: .modelLoad)
         let requestEvents = try reader.query(eventType: .request)
         let unloadEvents = try reader.query(eventType: .modelUnload)
@@ -180,7 +186,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 100
             )
         }
-        
+        recorder.flush()
+
         let json = try reader.exportJSON()
         let data = json.data(using: .utf8)!
         let decoded = try JSONDecoder().decode([GatewayEvent].self, from: data)
@@ -199,7 +206,8 @@ class EventReplayTests: XCTestCase {
                 message: "Test message \(i)"
             )
         }
-        
+        recorder.flush()
+
         let csv = try reader.exportCSV()
         let lines = csv.split(separator: "\n")
         
@@ -223,7 +231,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 1000 + (i * 100)
             )
         }
-        
+        recorder.flush()
+
         let stats = try reader.getStats()
         
         XCTAssertEqual(stats.totalEvents, 10)
@@ -252,7 +261,8 @@ class EventReplayTests: XCTestCase {
         }
         
         group.waitWithTimeout(seconds: 5)
-        
+        recorder.flush()
+
         let events = try reader.readAll()
         XCTAssertEqual(events.count, 100, "All concurrent writes should succeed")
     }
@@ -270,7 +280,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 100
             )
         }
-        
+        recorder.flush()
+
         let firstRead = try reader.readAll()
         XCTAssertEqual(firstRead.count, 10)
         
@@ -284,7 +295,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 100
             )
         }
-        
+        recorder.flush()
+
         let secondRead = try reader.readAll()
         XCTAssertEqual(secondRead.count, 15, "Events should be appended, not replaced")
         
@@ -313,7 +325,8 @@ class EventReplayTests: XCTestCase {
             durationMs: 100,
             message: nil
         )
-        
+        recorder.flush()
+
         let events = try reader.readAll()
         XCTAssertEqual(events[0].message, nil)
     }
@@ -328,7 +341,8 @@ class EventReplayTests: XCTestCase {
                 durationMs: 100
             )
         }
-        
+        recorder.flush()
+
         let lineCount = try reader.lineCount()
         XCTAssertEqual(lineCount, 7)
     }
