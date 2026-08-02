@@ -166,7 +166,7 @@ data: {"choices":[{"delta":{"content":"Hello"}}]}
 data: [DONE]</pre>
     <p class="label">Example</p>
     <pre>curl http://127.0.0.1:2525/v1/chat/completions \
-  -H "Authorization: Bearer $(defaults read com.lengtamlx.app apiKey)" \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
   -d '{"model":"auto","messages":[{"role":"user","content":"What is MLX?"}],"stream":true}'</pre>
   </div>
 
@@ -190,7 +190,7 @@ data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello"}
 data: {"type":"message_stop"}</pre>
     <p class="label">Example</p>
     <pre>curl http://127.0.0.1:2525/v1/messages \
-  -H "Authorization: Bearer $(defaults read com.lengtamlx.app apiKey)" \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
   -d '{"model":"auto","max_tokens":1024,"messages":[{"role":"user","content":"Hello!"}]}'</pre>
   </div>
 
@@ -209,7 +209,7 @@ data: {"type":"message_stop"}</pre>
   <div class="tab-panel" data-panel="routing">
     <p class="label" style="margin-top:0;">On every request, the gateway checks these in order and stops at the first match.</p>
     <ol class="routing">
-      <li><strong>Local exact match</strong> — model name is a key in <code>~/.lengtamlx/routes.json</code></li>
+      <li><strong>Local exact match</strong> — model name is a key in <code>~/.paglamlx/routes.json</code></li>
       <li><strong>Local substring match</strong> — name contains, or is contained in, a local route key</li>
       <li><strong>Prefix-based cloud routing</strong> — see table below</li>
       <li><strong>Free Router</strong> — if enabled in Settings → Cloud, falls through to OpenRouter</li>
@@ -242,9 +242,9 @@ data: {"type":"message_stop"}</pre>
   </div>
 
   <footer>
-    Sourced from <a href="index.html">paglagpt.github.io/PaglaMLX</a> &bull;
-    <a href="https://lengtamlx.docs.buildwithfern.com">Fern Docs</a> &bull;
-    <a href="https://github.com/paglagpt/PaglaMLX">GitHub</a>.
+    Sourced from <a href="index.html">paglaai.github.io/PaglaMLX</a> &bull;
+    <a href="https://paglamlx.docs.buildwithfern.com">Fern Docs</a> &bull;
+    <a href="https://github.com/paglaai/PaglaMLX">GitHub</a>.
   </footer>
 </div>
 

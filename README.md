@@ -16,12 +16,12 @@
 </p>
 
 <p align="center">
-  <a href="https://paglagpt.github.io/PaglaMLX/">Docs</a> ·
-  <a href="https://paglagpt.github.io/PaglaMLX/docs/api-reference/chat-completions">API Reference</a> ·
+  <a href="https://paglaai.github.io/PaglaMLX/">Docs</a> ·
+  <a href="https://paglaai.github.io/PaglaMLX/docs/api-reference/chat-completions">API Reference</a> ·
   <a href="#install">Install</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#features">Features</a> ·
-  <a href="https://github.com/paglagpt/PaglaMLX/releases">Releases</a>
+  <a href="https://github.com/paglaai/PaglaMLX/releases">Releases</a>
 </p>
 
 ---
@@ -38,12 +38,12 @@
 
 ### macOS App (Easiest)
 
-Download the latest `.dmg` from [Releases](https://github.com/paglagpt/PaglaMLX/releases), drag to Applications, and you're done. The app provides a native menu bar interface to manage everything.
+Download the latest `.dmg` from [Releases](https://github.com/paglaai/PaglaMLX/releases), drag to Applications, and you're done. The app provides a native menu bar interface to manage everything.
 
 ### From Source
 
 ```bash
-git clone https://github.com/paglagpt/PaglaMLX.git
+git clone https://github.com/paglaai/PaglaMLX.git
 cd PaglaMLX
 ./build_dmg.sh          # release build + .app + .dmg
 ```
@@ -59,7 +59,7 @@ Requires macOS 14.0+ (Sonoma), Python 3.12+, and Apple Silicon (M1/M2/M3/M4).
 
 ```bash
 curl http://127.0.0.1:2525/v1/chat/completions \
-  -H "Authorization: Bearer $(defaults read com.lengtamlx.app apiKey)" \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
   -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
 ```
 > Use `model=auto` to let the Auto-Router decide, or `model=<exact name>` to hit a specific local model.
@@ -107,11 +107,11 @@ Supports local text generation models, cloud fallback routing, and native protoc
 
 ## Contributing
 Contributions are welcome! Please open an issue to discuss changes before submitting a PR.
-Bug reports and feature requests: [open an issue](https://github.com/paglagpt/PaglaMLX/issues).
+Bug reports and feature requests: [open an issue](https://github.com/paglaai/PaglaMLX/issues).
 
 ## License
 MIT — see [LICENSE](LICENSE).
 
 <p align="center">
-  <a href="#lengtamlx">⬆ back to top</a>
+  <a href="#paglamlx">⬆ back to top</a>
 </p>

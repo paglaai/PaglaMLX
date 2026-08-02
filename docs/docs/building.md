@@ -8,7 +8,7 @@
 ## Build
 
 ```bash
-git clone https://github.com/paglagpt/PaglaMLX.git
+git clone https://github.com/paglaai/PaglaMLX.git
 cd PaglaMLX
 swift build -c release
 ```

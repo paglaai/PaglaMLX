@@ -129,12 +129,12 @@ def apply_continue():
 
 def apply_claude():
     endpoints = data.get("customApiEndpoints", {})
-    endpoints["lengta"] = {
+    endpoints["pagla"] = {
         "url": base_url,
         "key": api_key
     }
     data["customApiEndpoints"] = endpoints
-    data["primaryModel"] = "lengta"
+    data["primaryModel"] = "pagla"
 
 def apply_generic(key_path):
     data[key_path] = base_url
@@ -148,7 +148,7 @@ def apply_claude_desktop():
 
 def apply_opencode():
     providers = data.get("provider", {})
-    providers["lengtamlx"] = {
+    providers["paglamlx"] = {
         "name": "PaglaMLX",
         "npm": "@ai-sdk/openai-compatible",
         "options": {
@@ -167,7 +167,7 @@ def apply_openclaw():
     entry = {
         "models": {
             "providers": {
-                "lengtamlx": {
+                "paglamlx": {
                     "baseUrl": base_url,
                     "apiKey": api_key,
                     "api": "openai-completions",
@@ -182,7 +182,7 @@ def apply_openclaw():
     }
     # Merge into existing config
     prov = data.get("models", {}).get("providers", {})
-    prov["lengtamlx"] = entry["models"]["providers"]["lengtamlx"]
+    prov["paglamlx"] = entry["models"]["providers"]["paglamlx"]
     data.setdefault("models", {})["providers"] = prov
 
 def apply_hermes():
@@ -201,9 +201,9 @@ def apply_hermes():
 
 def apply_codex():
     toml = f\"\"\"model = "auto"
-model_provider = "lengtamlx"
+model_provider = "paglamlx"
 
-[model_providers.lengtamlx]
+[model_providers.paglamlx]
 name = "PaglaMLX"
 base_url = "{base_url}"
 env_key = "OPENAI_API_KEY"
@@ -245,10 +245,10 @@ if integration_type != "codex":
         sys.exit(1)
 """
         let fm = FileManager.default
-        let lengtaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".lengtamlx")
-        try? fm.createDirectory(at: lengtaDir, withIntermediateDirectories: true)
+        let paglaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".paglamlx")
+        try? fm.createDirectory(at: paglaDir, withIntermediateDirectories: true)
         
-        let scriptPath = lengtaDir.appendingPathComponent("integrator.py").path
+        let scriptPath = paglaDir.appendingPathComponent("integrator.py").path
         try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
         
         var typeArg = ""

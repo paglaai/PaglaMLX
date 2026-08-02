@@ -27,8 +27,8 @@ If auto-detection doesn't find your Python:
 The app checks if your Python is inside a virtual environment (`.venv/`, `venv/`, or `.virtualenvs/`). Using a venv is recommended to keep dependencies isolated:
 
 ```bash
-python3 -m venv ~/.venv/lengtamlx
-source ~/.venv/lengtamlx/bin/activate
+python3 -m venv ~/.venv/paglamlx
+source ~/.venv/paglamlx/bin/activate
 pip3 install mlx-lm fastapi uvicorn httpx
 ```
 

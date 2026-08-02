@@ -327,7 +327,7 @@ struct ApiReferenceView: View {
                     {
                       "models": {
                         "providers": {
-                          "lengtamlx": {
+                          "paglamlx": {
                             "baseUrl": "\#(apiBase)",
                             "apiKey": "\#(apiKey)",
                             "api": "openai-completions"
@@ -372,7 +372,7 @@ struct ApiReferenceView: View {
                 Text("On every request, the gateway checks these in order:").font(.caption).foregroundColor(.secondary)
                     .padding(.bottom, 4)
 
-                routeRow("Exact match", "~/.lengtamlx/routes.json key")
+                routeRow("Exact match", "~/.paglamlx/routes.json key")
                 routeRow("Substring", "local route key contains (or is in) model name")
                 routeRow("auto", "Heuristic: VLM → context → intent → best local")
                 routeRow("free", "Multi-provider failover chain (10 providers)")

@@ -21,7 +21,7 @@
           ▼                                      ▼
 ┌─────────────────────┐          ┌───────────────────────────┐
 │ routes.json          │          │ Third-party config files  │
-│ ~/.lengtamlx/        │          │ VS Code, Claude Desktop,  │
+│ ~/.paglamlx/        │          │ VS Code, Claude Desktop,  │
 │ (live route table)   │          │ OpenCode, Codex, ...      │
 └──────────┬───────────┘          └───────────────────────────┘
            │

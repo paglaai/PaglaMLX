@@ -1,7 +1,7 @@
 import Foundation
 
 /// JSONLEventReader: Parse and query append-only event stream
-/// Reads ~/.lengtamlx/events.jsonl with filtering, streaming, and export capabilities
+/// Reads ~/.paglamlx/events.jsonl with filtering, streaming, and export capabilities
 
 class EventReader {
     private let eventFileURL: URL
@@ -11,8 +11,8 @@ class EventReader {
             self.eventFileURL = custom
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            let lengtaDir = appSupport.appendingPathComponent("PaglaMLX", isDirectory: true)
-            self.eventFileURL = lengtaDir.appendingPathComponent("events.jsonl")
+            let paglaDir = appSupport.appendingPathComponent("PaglaMLX", isDirectory: true)
+            self.eventFileURL = paglaDir.appendingPathComponent("events.jsonl")
         }
     }
     

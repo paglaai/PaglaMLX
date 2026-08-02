@@ -18,11 +18,11 @@
   <circle cx="105" cy="65" r="6" fill="#27c93f"/>
 
   <!-- Title -->
-  <text x="500" y="69" text-anchor="middle" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#6B7280" font-weight="500">lengtamlx — serve</text>
+  <text x="500" y="69" text-anchor="middle" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#6B7280" font-weight="500">paglamlx — serve</text>
   
   <!-- Content -->
   <g font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#E5E7EB">
-    <text x="65" y="115"><tspan fill="#34D399">~</tspan> $ lengtamlx serve</text>
+    <text x="65" y="115"><tspan fill="#34D399">~</tspan> $ paglamlx serve</text>
     
     <text x="65" y="145"><tspan fill="#60A5FA">[INFO]</tspan> Starting PaglaMLX orchestrator...</text>
     <text x="65" y="165"><tspan fill="#60A5FA">[INFO]</tspan> Discovered 3 local MLX models in ~/.cache/huggingface/hub</text>

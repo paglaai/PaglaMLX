@@ -93,4 +93,4 @@ If Python is installed but not detected, set the path manually in **Settings →
 - Check that `mlx-lm`, `fastapi`, `uvicorn`, and `httpx` are installed.
 - Try setting the Python path manually.
 - Check Console.app for crash logs from the Python process.
-- Delete `~/.lengtamlx/` and restart the app.
+- Delete `~/.paglamlx/` and restart the app.

@@ -8,7 +8,7 @@
 
 ## Download (recommended)
 
-1. Download the latest `PaglaMLX.dmg` from the [Releases page](https://github.com/paglagpt/PaglaMLX/releases).
+1. Download the latest `PaglaMLX.dmg` from the [Releases page](https://github.com/paglaai/PaglaMLX/releases).
 2. Open the DMG and drag `PaglaMLX.app` to your Applications folder.
 3. Open the app.
 
@@ -23,8 +23,8 @@ pip3 install mlx-lm fastapi uvicorn httpx
 If you prefer a virtual environment:
 
 ```bash
-python3 -m venv ~/.venv/lengtamlx
-source ~/.venv/lengtamlx/bin/activate
+python3 -m venv ~/.venv/paglamlx
+source ~/.venv/paglamlx/bin/activate
 pip3 install mlx-lm fastapi uvicorn httpx
 ```
 
@@ -33,7 +33,7 @@ Then point PaglaMLX to this Python in **Settings → Python**.
 ## Build from source
 
 ```bash
-git clone https://github.com/paglagpt/PaglaMLX.git
+git clone https://github.com/paglaai/PaglaMLX.git
 cd PaglaMLX
 ./build_dmg.sh
 ```
@@ -43,7 +43,7 @@ This compiles the release binary, creates a signed `.app` bundle, and packages i
 ### Build and run directly
 
 ```bash
-git clone https://github.com/paglagpt/PaglaMLX.git
+git clone https://github.com/paglaai/PaglaMLX.git
 cd PaglaMLX
 swift build -c release
 open .build/release/PaglaMLX

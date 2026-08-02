@@ -85,7 +85,7 @@ data: [DONE]
 
 ```bash
 curl http://127.0.0.1:2525/v1/chat/completions \
-  -H "Authorization: Bearer $(defaults read com.lengtamlx.app apiKey)" \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "auto",

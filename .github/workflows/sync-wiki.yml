@@ -32,7 +32,7 @@ jobs:
 
           ## Quick Start
 
-          1. **Download** the latest DMG from [Releases](https://github.com/paglagpt/PaglaMLX/releases)
+          1. **Download** the latest DMG from [Releases](https://github.com/paglaai/PaglaMLX/releases)
           2. **Mount** `/Volumes/CastingC0UCH/M0DEL/MLX/` with your MLX models
           3. **Launch** PaglaMLX — runs as a menu-bar app on port **2525**
           4. **Point** any OpenAI-compatible client at `http://localhost:2525/v1`
@@ -106,7 +106,7 @@ jobs:
 
           ## Port
 
-          Default: `2525`. Change via the `LENGTA_PORT` env var.
+          Default: `2525`. Change via the `PAGLA_PORT` env var.
 
           ## Model Path
 
@@ -182,12 +182,12 @@ jobs:
           cat > wiki/Contributing.md << 'WIKIEOF'
           # Contributing
 
-          See [CONTRIBUTING.md](https://github.com/paglagpt/PaglaMLX/blob/main/CONTRIBUTING.md) on GitHub.
+          See [CONTRIBUTING.md](https://github.com/paglaai/PaglaMLX/blob/main/CONTRIBUTING.md) on GitHub.
 
           ## Development Setup
 
           ```bash
-          git clone https://github.com/paglagpt/PaglaMLX.git
+          git clone https://github.com/paglaai/PaglaMLX.git
           cd PaglaMLX
           swift build
           swift test
@@ -210,12 +210,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/paglagpt/PaglaMLX.wiki.git"
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/paglaai/PaglaMLX.wiki.git"
           if git ls-remote --exit-code "$WIKI_URL" &>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::warning::Wiki repo not yet initialized. Visit https://github.com/paglagpt/PaglaMLX/wiki and create the first page to initialize it."
+            echo "::warning::Wiki repo not yet initialized. Visit https://github.com/paglaai/PaglaMLX/wiki and create the first page to initialize it."
           fi
 
       - name: Push to wiki repo
@@ -223,9 +223,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "paglagpt"
-          git config --global user.email "paglagpt@users.noreply.github.com"
-          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/paglagpt/PaglaMLX.wiki.git"
+          git config --global user.name "paglaai"
+          git config --global user.email "paglaai@users.noreply.github.com"
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/paglaai/PaglaMLX.wiki.git"
           git clone "$WIKI_URL" wiki-push
           cd wiki-push
           cp -r ../wiki/* .

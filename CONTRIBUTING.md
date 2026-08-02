@@ -63,8 +63,8 @@ npm start
 
 ## What to Work On
 
-Check the [Issues](https://github.com/paglagpt/PaglaMLX/issues) page for open bugs and feature requests. If you have an idea that's not listed, open an issue first to discuss it.
+Check the [Issues](https://github.com/paglaai/PaglaMLX/issues) page for open bugs and feature requests. If you have an idea that's not listed, open an issue first to discuss it.
 
 ## Questions?
 
-Open a [Discussion](https://github.com/paglagpt/PaglaMLX/discussions) or ask in the issue tracker.
+Open a [Discussion](https://github.com/paglaai/PaglaMLX/discussions) or ask in the issue tracker.

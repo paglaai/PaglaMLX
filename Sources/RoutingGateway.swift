@@ -33,7 +33,7 @@ import uvicorn
 
 app = FastAPI(title="PaglaMLX Routing Gateway")
 
-API_KEY = os.environ.get("LENGTA_API_KEY", "")
+API_KEY = os.environ.get("PAGLA_API_KEY", "")
 OR_KEY = os.environ.get("OPENROUTER_KEY", "")
 FREE_KEY = os.environ.get("FREE_ROUTER_KEY", "") or OR_KEY
 ANT_KEY = os.environ.get("ANTHROPIC_KEY", "")
@@ -95,8 +95,8 @@ def smart_route(body, headers):
         
     return MTPLX_PORT
 
-ROUTING_FILE = os.path.expanduser("~/.lengtamlx/routes.json")
-EVENTS_FILE = os.path.expanduser("~/.lengtamlx/events.jsonl")
+ROUTING_FILE = os.path.expanduser("~/.paglamlx/routes.json")
+EVENTS_FILE = os.path.expanduser("~/.paglamlx/events.jsonl")
 
 session_routes = {}
 
@@ -1047,10 +1047,10 @@ if __name__ == "__main__":
     uvicorn.run(app, host=host, port=port, log_level="warning")
 """
         let fm = FileManager.default
-        let lengtaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".lengtamlx")
-        try? fm.createDirectory(at: lengtaDir, withIntermediateDirectories: true)
+        let paglaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".paglamlx")
+        try? fm.createDirectory(at: paglaDir, withIntermediateDirectories: true)
         
-        let scriptPath = lengtaDir.appendingPathComponent("gateway.py").path
+        let scriptPath = paglaDir.appendingPathComponent("gateway.py").path
         try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
         
         let p = Process()
@@ -1064,7 +1064,7 @@ if __name__ == "__main__":
         env["PATH"] = extraPaths + ":" + (env["PATH"] ?? "")
         
         // Inject BYOK keys
-        env["LENGTA_API_KEY"] = settings.apiKey
+        env["PAGLA_API_KEY"] = settings.apiKey
         env["OPENROUTER_KEY"] = settings.openrouterKey
         env["ANTHROPIC_KEY"] = settings.anthropicKey
         env["OPENAI_KEY"] = settings.openaiKey
@@ -1131,10 +1131,10 @@ if __name__ == "__main__":
     /// Called by ModelOrchestrator whenever a model starts or stops
     func updateRoutingTable(_ routes: [String: [String: Any]]) {
         let fm = FileManager.default
-        let lengtaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".lengtamlx")
-        try? fm.createDirectory(at: lengtaDir, withIntermediateDirectories: true)
+        let paglaDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".paglamlx")
+        try? fm.createDirectory(at: paglaDir, withIntermediateDirectories: true)
         
-        let routesFile = lengtaDir.appendingPathComponent("routes.json")
+        let routesFile = paglaDir.appendingPathComponent("routes.json")
         if let data = try? JSONSerialization.data(withJSONObject: routes) {
             try? data.write(to: routesFile)
         }

@@ -6,7 +6,7 @@ If you discover a security vulnerability in PaglaMLX, please report it privately
 
 **Do not open a public issue.** Instead, send a description to the maintainers via:
 
-- **GitHub Security Advisory**: https://github.com/paglagpt/PaglaMLX/security/advisories/new
+- **GitHub Security Advisory**: https://github.com/paglaai/PaglaMLX/security/advisories/new
 - **Email**: Reach out to the repository owner through the GitHub profile.
 
 Please include:

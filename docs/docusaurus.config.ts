@@ -7,10 +7,10 @@ const config: Config = {
   tagline: 'Local LLM orchestration for Apple Silicon',
   favicon: 'img/favicon.ico',
 
-  url: 'https://paglagpt.github.io',
+  url: 'https://paglaai.github.io',
   baseUrl: '/PaglaMLX/',
 
-  organizationName: 'paglagpt',
+  organizationName: 'paglaai',
   projectName: 'PaglaMLX',
 
   onBrokenLinks: 'throw',
@@ -27,7 +27,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/paglagpt/PaglaMLX/tree/main/docs/',
+          editUrl: 'https://github.com/paglaai/PaglaMLX/tree/main/docs/',
           showLastUpdateTime: true,
         },
         blog: false,
@@ -57,7 +57,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://github.com/paglagpt/PaglaMLX',
+          href: 'https://github.com/paglaai/PaglaMLX',
           label: 'GitHub',
           position: 'right',
         },
@@ -79,11 +79,11 @@ const config: Config = {
           items: [
             {
               label: 'GitHub Issues',
-              href: 'https://github.com/paglagpt/PaglaMLX/issues',
+              href: 'https://github.com/paglaai/PaglaMLX/issues',
             },
             {
               label: 'GitHub Discussions',
-              href: 'https://github.com/paglagpt/PaglaMLX/discussions',
+              href: 'https://github.com/paglaai/PaglaMLX/discussions',
             },
           ],
         },
@@ -92,12 +92,12 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/paglagpt/PaglaMLX',
+              href: 'https://github.com/paglaai/PaglaMLX',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} PaglaMLX Contributors. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} PaglaAI Contributors. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

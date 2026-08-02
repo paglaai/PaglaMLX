@@ -8,7 +8,7 @@ When a request arrives, the gateway checks the following in order:
 
 ### 1. Local exact match
 
-If the model name is an exact key in `routes.json` (`~/.lengtamlx/routes.json`), the request is forwarded to the corresponding local `mlx_lm.server` process.
+If the model name is an exact key in `routes.json` (`~/.paglamlx/routes.json`), the request is forwarded to the corresponding local `mlx_lm.server` process.
 
 ### 2. Auto-Router (`model=auto`)
 

@@ -50,7 +50,7 @@ struct GatewayEvent: Codable {
 
 class EventRecorder {
     private let eventFileURL: URL
-    private let queue = DispatchQueue(label: "com.lengtamlx.eventrecorder", qos: .utility)
+    private let queue = DispatchQueue(label: "com.paglaai.eventrecorder", qos: .utility)
     private let isoFormatter = ISO8601DateFormatter()
 
     init(customPath: URL? = nil) {
@@ -58,8 +58,8 @@ class EventRecorder {
             self.eventFileURL = custom
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            let lengtaDir = appSupport.appendingPathComponent("PaglaMLX", isDirectory: true)
-            self.eventFileURL = lengtaDir.appendingPathComponent("events.jsonl")
+            let paglaDir = appSupport.appendingPathComponent("PaglaMLX", isDirectory: true)
+            self.eventFileURL = paglaDir.appendingPathComponent("events.jsonl")
         }
 
         let dir = eventFileURL.deletingLastPathComponent()

@@ -3,7 +3,7 @@ import Observation
 
 // MARK: - EventLogWatcher
 //
-// Tails ~/.lengtamlx/events.jsonl in real-time using a kernel-level file
+// Tails ~/.paglamlx/events.jsonl in real-time using a kernel-level file
 // descriptor source (DispatchSource). Each time the file grows, only the new
 // bytes are read, parsed as GatewayEvent, and forwarded to ActivityTracker.shared.
 
@@ -14,11 +14,11 @@ final class EventLogWatcher {
     private var source: DispatchSourceFileSystemObject?
     private var fd: Int32 = -1
     private var bytesRead: UInt64 = 0
-    private let queue = DispatchQueue(label: "com.lengtamlx.eventlogwatcher", qos: .utility)
+    private let queue = DispatchQueue(label: "com.paglaai.eventlogwatcher", qos: .utility)
 
     private init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        eventsURL = home.appendingPathComponent(".lengtamlx/events.jsonl")
+        eventsURL = home.appendingPathComponent(".paglamlx/events.jsonl")
     }
 
     // MARK: - Lifecycle

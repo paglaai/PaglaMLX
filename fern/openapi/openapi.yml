@@ -371,7 +371,7 @@ components:
       description: >
         Optional. Only required if you've enabled the Bearer-token guard
         in Settings -> Network. Retrieve the key locally with:
-        defaults read com.lengtamlx.app apiKey
+        defaults read com.paglaai.app apiKey
 
   schemas:
     ErrorResponse:

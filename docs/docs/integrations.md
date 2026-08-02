@@ -19,7 +19,7 @@ All VS Code extensions share the same settings file (`~/Library/Application Supp
 | Tool           | Config file                              | What's configured                        |
 |----------------|------------------------------------------|------------------------------------------|
 | Continue.dev   | `~/.continue/config.json`                | OpenAI provider pointing to `PaglaMLX` model |
-| Claude Code    | `~/.claude.json`                         | `customApiEndpoints.lengta` block        |
+| Claude Code    | `~/.claude.json`                         | `customApiEndpoints.pagla` block        |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | `ANTHROPIC_BASE_URL` + `ANTHROPIC_API_KEY` env vars |
 | OpenCode       | `~/.config/opencode/opencode.json`       | Provider block (`@ai-sdk/openai-compatible`) |
 | Codex CLI      | `~/.codex/config.toml`                   | Full TOML provider config                 |
