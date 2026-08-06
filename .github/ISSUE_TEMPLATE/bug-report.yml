@@ -1,0 +1,32 @@
+---
+name: Bug report
+about: Report a bug to help us improve
+title: ''
+labels: bug
+assignees: ''
+---
+
+**Describe the bug**
+A clear and concise description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behaviour:
+1. Go to '...'
+2. Click on '...'
+3. Scroll down to '...'
+4. See error
+
+**Expected behaviour**
+What you expected to happen instead.
+
+**Screenshots or logs**
+If applicable, add screenshots or console logs.
+
+**Environment (please complete):**
+- macOS version: [e.g. 15.0]
+- Python version: [e.g. 3.13]
+- PaglaMLX version: [e.g. 1.1.0]
+- Installation method: [DMG / built from source]
+
+**Additional context**
+Any other context about the problem.

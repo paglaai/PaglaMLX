@@ -1,0 +1,40 @@
+---
+title: Model routing
+description: How the gateway decides where each request goes
+hidden: false
+---
+
+Every request carries a `model` field. On each request, the gateway
+works through the following checks in order and stops at the first
+match:
+
+1. **Local exact match** — the model name is a key in
+   `~/.paglamlx/routes.json`.
+2. **Local substring match** — the name contains, or is contained in,
+   one of your local route keys.
+3. **Prefix-based cloud routing** — see the table below.
+4. **Free Router** — if you've enabled it in Settings -> Cloud, the
+   request falls through to OpenRouter's free tier.
+5. **Session stickiness** — if this session already landed on a
+   backend, later requests from it reuse that same backend.
+6. **Local default fallback** — the first available local model.
+7. **503** — nothing matched.
+
+## Cloud prefixes
+
+| Prefix | Routes to | Requires |
+|---|---|---|
+| `gpt-`, `o1`, `o3` | OpenAI | `OPENAI_KEY` |
+| `claude-` | Anthropic | `ANTHROPIC_KEY` |
+| `gemini-` | Gemini | `GEMINI_KEY` |
+| `openrouter/` | OpenRouter | `OPENROUTER_KEY` |
+| `groq/` | Groq | `GROQ_KEY` |
+| `together/` | Together AI | `TOGETHER_KEY` |
+
+## The Auto-Router
+
+Setting `"model": "auto"` skips the table above and instead picks a
+local model based on the request itself: whether it needs multimodal
+input, whether it needs a long context window, whether the prompt
+looks like a coding or math task, and finally your configured default
+model if none of those signals apply.

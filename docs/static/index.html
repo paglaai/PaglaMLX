@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PaglaMLX — Local LLM Gateway for Apple Silicon</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Premium Stark Monochrome Design System */
+    :root {
+      --bg: #ffffff;
+      --fg: #000000;
+      --gray-light: #f4f4f5;
+      --gray-mid: #e4e4e7;
+      --gray-dark: #27272a;
+      --gray-muted: #71717a;
+      --border: #000000;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    }
+
+    .dark-theme {
+      --bg: #09090b;
+      --fg: #ffffff;
+      --gray-light: #18181b;
+      --gray-mid: #27272a;
+      --gray-dark: #e4e4e7;
+      --gray-muted: #a1a1aa;
+      --border: #ffffff;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-sans);
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .font-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* Architectural dividers */
+    .stark-border {
+      border: 1px solid var(--border);
+    }
+    .stark-border-b {
+      border-bottom: 1px solid var(--border);
+    }
+    .stark-border-t {
+      border-top: 1px solid var(--border);
+    }
+
+    /* Seamless CSS transitions */
+    .smooth-transition {
+      transition: all 0.2s ease-in-out;
+    }
+
+    input, textarea, select {
+      background-color: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      background-color: var(--gray-light);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+
+  <!-- Header Nav bar -->
+  <header class="stark-border-b py-5 px-6 md:px-12 flex items-center justify-between sticky top-0 bg-[var(--bg)] z-40 transition-colors duration-300">
+    <div class="flex items-center gap-4">
+      <div class="w-8 h-8 stark-border flex items-center justify-center font-bold text-sm tracking-tighter hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition cursor-pointer">
+        L
+      </div>
+      <div>
+        <h1 class="text-xs font-mono font-bold tracking-widest uppercase">PAGLA / MLX</h1>
+        <p class="text-[9px] font-mono text-[var(--gray-muted)]">macOS local gateway core</p>
+      </div>
+    </div>
+
+    <!-- Right Side Utility controls -->
+          <div class="flex items-center gap-6">
+      <button onclick="toggleTheme()" class="text-xs font-mono stark-border px-3 py-1 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+        STARK THEME SWITCH
+      </button>
+      <a href="api-reference.html" class="hidden sm:inline text-xs font-mono hover:underline">
+        API Reference &rarr;
+      </a>
+      <a href="https://docs.buildwithfern.com/paglaai/paglamlx" target="_blank" class="hidden sm:inline text-xs font-mono hover:underline">
+        Docs &rarr;
+      </a>
+      <a href="https://github.com/paglaai/PaglaMLX" target="_blank" class="hidden sm:inline text-xs font-mono hover:underline">
+        GitHub &rarr;
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Showcase Workspace -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-6 md:p-12 space-y-16">
+
+    <!-- Hero Title Space (Minimal Bold typography inspired by print layouts) -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-8 py-6">
+      <div class="md:col-span-2 space-y-4">
+        <h2 class="text-4xl md:text-6xl font-extrabold tracking-tighter uppercase leading-none">
+          Local LLM Orchestration,<br>Stripped of Overhead.
+        </h2>
+        <p class="text-sm md:text-base text-[var(--gray-muted)] font-light max-w-xl leading-relaxed">
+          <strong>PaglaMLX</strong> is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. It manages background model server processes and runs a smart reverse proxy gateway at <code>127.0.0.1:2525/v1</code> that speaks both OpenAI and Anthropic API formats natively. Point any compatible developer client (like VS Code, Claude Desktop, or Continue) at the gateway to route requests dynamically to your active local model, or fall back to cloud providers when needed.
+        </p>
+      </div>
+      
+      <!-- Static Specification Panel -->
+      <div class="stark-border p-5 space-y-4 flex flex-col justify-between">
+        <div class="space-y-1 font-mono text-xs">
+          <div class="flex justify-between">
+            <span class="text-[var(--gray-muted)]">VERSION</span>
+            <span class="font-bold">1.3.0 Stable</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--gray-muted)]">DEFAULT PORT</span>
+            <span class="font-bold">2525 / v1</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--gray-muted)]">ARCHITECTURE</span>
+            <span class="font-bold">Apple Silicon (M1/M2/M3/M4)</span>
+          </div>
+        </div>
+        <div class="pt-4 stark-border-t space-y-2">
+          <a href="api-reference.html" class="block text-center text-xs font-mono font-bold stark-border py-2 text-[var(--bg)] bg-[var(--fg)] hover:bg-[var(--bg)] hover:text-[var(--fg)] smooth-transition">
+            API REFERENCE &bull; TRY IT LIVE
+          </a>
+          <a href="https://docs.buildwithfern.com/paglaai/paglamlx" target="_blank" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+            FULL DOCS &bull; FERN
+          </a>
+          <a href="#quickstart" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+            QUICK START &bull; TERMINAL
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Section: macOS Menu Bar Simulator -->
+    <section class="space-y-6">
+      <div class="stark-border-b pb-4">
+        <span class="text-[10px] font-mono tracking-widest text-[var(--gray-muted)] uppercase">&bull; Interactive Native Control</span>
+        <h3 class="text-lg font-bold uppercase tracking-tight">The macOS System Menu-Bar Simulator</h3>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        
+        <!-- Live Tool Controller (Left) -->
+        <div class="lg:col-span-1 space-y-4">
+          <p class="text-xs text-[var(--gray-muted)] leading-relaxed">
+            PaglaMLX resides quietly in your macOS system menu bar. Click different states below to configure and preview how the menu app reacts in real-time.
+          </p>
+
+          <div class="space-y-2">
+            <button onclick="setMockMenuBarState('llama')" class="w-full text-left text-xs font-mono stark-border p-3 flex justify-between items-center hover:bg-[var(--gray-light)] smooth-transition">
+              <span>Load: Llama-3.2-3B</span>
+              <span class="text-[var(--gray-muted)]">&rarr;</span>
+            </button>
+            <button onclick="setMockMenuBarState('routing')" class="w-full text-left text-xs font-mono stark-border p-3 flex justify-between items-center hover:bg-[var(--gray-light)] smooth-transition">
+              <span>Inspect Cloud Fallbacks</span>
+              <span class="text-[var(--gray-muted)]">&rarr;</span>
+            </button>
+            <button onclick="setMockMenuBarState('logs')" class="w-full text-left text-xs font-mono stark-border p-3 flex justify-between items-center hover:bg-[var(--gray-light)] smooth-transition">
+              <span>View Terminal Streams</span>
+              <span class="text-[var(--gray-muted)]">&rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rendered macOS Menu Bar UI (Right) -->
+        <div class="lg:col-span-2 stark-border p-6 flex flex-col items-center justify-center bg-[var(--gray-light)] relative min-h-[320px]">
+          <span class="absolute top-3 left-3 text-[9px] font-mono text-[var(--gray-muted)]">MACOS SYSTEM MENU DRAW STATE</span>
+
+          <!-- Floating Menu-Bar Panel -->
+          <div class="w-72 bg-[var(--bg)] stark-border p-4 space-y-4 macos-shadow relative" id="menubar-popup">
+            
+            <!-- Window Bar -->
+            <div class="flex items-center justify-between border-b border-[var(--fg)] pb-2">
+              <span class="text-[10px] font-mono font-bold uppercase tracking-wider">PAGLA GATEWAY CONTROL</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-[var(--fg)]"></span>
+            </div>
+
+            <!-- Model Status Slot -->
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--gray-muted)] font-mono">Gateway IP:</span>
+                <span class="font-mono font-medium">127.0.0.1:2525</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--gray-muted)] font-mono">Active Engine:</span>
+                <span class="font-mono font-medium" id="menubar-active-engine">Llama-3.2-3B (Loaded)</span>
+              </div>
+            </div>
+
+            <!-- Loaded Model Table -->
+            <div class="pt-3 stark-border-t space-y-1.5 text-xs">
+              <div class="text-[9px] font-mono text-[var(--gray-muted)] uppercase tracking-wider">Loaded Models</div>
+              <div class="flex items-center justify-between font-mono text-[11px]" id="model-item-1">
+                <span>&bull; Llama-3.2-3B-Instruct</span>
+                <span class="font-bold">4-bit</span>
+              </div>
+              <div class="flex items-center justify-between font-mono text-[11px]" id="model-item-2">
+                <span>&bull; Phi-3-Medium</span>
+                <span class="text-[var(--gray-muted)]">Offline</span>
+              </div>
+            </div>
+
+            <!-- Action Area -->
+            <div class="pt-3 stark-border-t flex gap-2">
+              <button class="flex-1 text-center font-mono text-[10px] stark-border py-1.5 hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+                Restart Server
+              </button>
+              <button class="flex-1 text-center font-mono text-[10px] stark-border py-1.5 hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+                Copy API Key
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Section: Two-Way Dialect Translation -->
+    <section class="space-y-6">
+      <div class="stark-border-b pb-4">
+        <span class="text-[10px] font-mono tracking-widest text-[var(--gray-muted)] uppercase">&bull; Structural Integration Spec</span>
+        <h3 class="text-lg font-bold uppercase tracking-tight">Bidirectional Dialect Translation</h3>
+      </div>
+
+      <p class="text-xs text-[var(--gray-muted)] max-w-xl">
+        The gateway understands both OpenAI and Anthropic API shapes. Point Claude-native clients (like Claude Desktop) or OpenAI clients at the exact same port. Watch the real-time translation block below.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Input Client Request Frame -->
+        <div class="stark-border p-5 space-y-4">
+          <div class="flex justify-between items-center text-xs font-mono">
+            <span class="font-bold">1. CLIENT ANTHROPIC POST REQ</span>
+            <span class="text-[var(--gray-muted)]">PORT: 2525/v1/messages</span>
+          </div>
+
+          <div class="space-y-3">
+            <textarea id="anthropic-request-code" rows="6" class="w-full font-mono text-xs p-3 focus:bg-[var(--gray-light)] transition-colors resize-none">{
+  "model": "claude-3-5-sonnet",
+  "max_tokens": 1024,
+  "messages": [
+    {"role": "user", "content": "Hello local LLM!"}
+  ]
+}</textarea>
+            <button onclick="triggerInteractiveTranslation()" class="w-full text-xs font-mono stark-border py-2 text-[var(--bg)] bg-[var(--fg)] hover:bg-[var(--bg)] hover:text-[var(--fg)] smooth-transition font-bold">
+              TRANSLATE & DISPATCH
+            </button>
+          </div>
+        </div>
+
+        <!-- Translated Output Gateway Payload Frame -->
+        <div class="stark-border p-5 space-y-4 flex flex-col justify-between">
+          <div class="flex justify-between items-center text-xs font-mono">
+            <span class="font-bold">2. TRANSLATED OPENAI OUTPUT</span>
+            <span class="text-[var(--gray-muted)]">INTERNAL TRANSFORMATION</span>
+          </div>
+
+          <div class="flex-1 bg-[var(--gray-light)] p-3 rounded stark-border flex flex-col justify-between">
+            <pre id="translated-payload-view" class="font-mono text-xs text-[var(--gray-muted)] whitespace-pre-wrap leading-relaxed">{
+  "model": "auto",
+  "messages": [
+    {"role": "user", "content": "Hello local LLM!"}
+  ],
+  "max_tokens": 1024,
+  "temperature": 0.0
+}</pre>
+            <div class="pt-3 stark-border-t mt-3 flex items-center justify-between text-[10px] font-mono text-[var(--gray-muted)]">
+              <span>ROUTING TO: <strong class="text-[var(--fg)]" id="route-output-target">Local MLX (Auto)</strong></span>
+              <span>TRANSLATION: OK</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Conceptual Section: Architectural Routing Roadmap -->
+    <section class="space-y-6">
+      <div class="stark-border-b pb-4">
+        <span class="text-[10px] font-mono tracking-widest text-[var(--gray-muted)] uppercase">&bull; Priority Priority Cascade</span>
+        <h3 class="text-lg font-bold uppercase tracking-tight">The Resolution Architecture</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+        
+        <div class="stark-border p-4 space-y-2">
+          <span class="font-mono text-xs text-[var(--gray-muted)]">01 / EXACT MATCH</span>
+          <h4 class="text-xs font-bold uppercase">Local routes.json</h4>
+          <p class="text-[11px] text-[var(--gray-muted)] leading-relaxed">Exact matches loaded configurations instantly.</p>
+        </div>
+
+        <div class="stark-border p-4 space-y-2">
+          <span class="font-mono text-xs text-[var(--gray-muted)]">02 / SUBSTRING</span>
+          <h4 class="text-xs font-bold uppercase">Name Contained</h4>
+          <p class="text-[11px] text-[var(--gray-muted)] leading-relaxed">Partial model tags resolve directly to similar backends.</p>
+        </div>
+
+        <div class="stark-border p-4 space-y-2">
+          <span class="font-mono text-xs text-[var(--gray-muted)]">03 / PREFIX ROUTE</span>
+          <h4 class="text-xs font-bold uppercase">Cloud Redirection</h4>
+          <p class="text-[11px] text-[var(--gray-muted)] leading-relaxed">Checks cloud prefixes like `gpt-` or `claude-` to bypass local server.</p>
+        </div>
+
+        <div class="stark-border p-4 space-y-2">
+          <span class="font-mono text-xs text-[var(--gray-muted)]">04 / SESSION FALLBACK</span>
+          <h4 class="text-xs font-bold uppercase">Stickiness Priority</h4>
+          <p class="text-[11px] text-[var(--gray-muted)] leading-relaxed">Reuses previously connected session endpoints.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Installation & Terminal Command Workspace -->
+    <section id="quickstart" class="space-y-6">
+      <div class="stark-border-b pb-4">
+        <span class="text-[10px] font-mono tracking-widest text-[var(--gray-muted)] uppercase">&bull; Command Terminal Console</span>
+        <h3 class="text-lg font-bold uppercase tracking-tight">Getting Started Offline</h3>
+      </div>
+
+      <div class="stark-border p-6 bg-[var(--bg)] space-y-4">
+        <div class="flex items-center justify-between text-xs font-mono">
+          <div class="flex gap-1.5">
+            <span class="w-3.5 h-3.5 rounded-full stark-border bg-[var(--fg)]"></span>
+            <span class="text-[var(--gray-muted)]">PAGLA INTEGRATION TERMINAL</span>
+          </div>
+          <button onclick="copyToClipboard('quick-start-command', 'copy-status-1')" class="stark-border px-3 py-0.5 text-[10px] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+            <span id="copy-status-1">Copy Script</span>
+          </button>
+        </div>
+
+        <pre id="quick-start-command" class="font-mono text-xs p-4 bg-[var(--gray-light)] overflow-x-auto text-[var(--fg)] leading-relaxed"># Verify gateway health
+curl http://127.0.0.1:2525/v1
+
+# Dispatch query to Auto-Router
+curl http://127.0.0.1:2525/v1/chat/completions \
+  -d '{
+    "model": "auto",
+    "messages": [{"role": "user", "content": "What is local MLX?"}]
+  }'</pre>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="stark-border-t py-8 px-6 md:px-12 mt-12 bg-[var(--gray-light)] text-xs text-[var(--gray-muted)] transition-colors duration-300">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <span class="font-mono font-bold text-[var(--fg)]">PAGLAMLX</span>
+        <span>&bull;</span>
+        <span>Local inference gateway for Apple Silicon architecture.</span>
+      </div>
+      <div class="flex gap-4 font-mono text-[11px]">
+        <a href="api-reference.html" class="underline text-[var(--fg)]">API Reference</a>
+        <span>&bull;</span>
+        <a href="https://docs.buildwithfern.com/paglaai/paglamlx" target="_blank" class="underline text-[var(--fg)]">Docs</a>
+        <span>&bull;</span>
+        <a href="https://github.com/paglaai/PaglaMLX" target="_blank" class="underline text-[var(--fg)]">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme switching logic
+    function toggleTheme() {
+      document.body.classList.toggle('dark-theme');
+    }
+
+    // Set interactive Mac System Menu state transitions
+    function setMockMenuBarState(mode) {
+      const activeEngine = document.getElementById('menubar-active-engine');
+      const item1 = document.getElementById('model-item-1');
+      const item2 = document.getElementById('model-item-2');
+
+      if (mode === 'llama') {
+        activeEngine.textContent = "Llama-3.2-3B (Loaded)";
+        item1.innerHTML = "<span>&bull; Llama-3.2-3B-Instruct</span> <span class='font-bold'>4-bit</span>";
+        item2.innerHTML = "<span>&bull; Phi-3-Medium</span> <span class='text-[var(--gray-muted)]'>Offline</span>";
+      } else if (mode === 'routing') {
+        activeEngine.textContent = "Multi-Engine Route Ready";
+        item1.innerHTML = "<span>&bull; Claude Bridge Prefix</span> <span class='font-bold'>Active</span>";
+        item2.innerHTML = "<span>&bull; GPT Override Fallback</span> <span class='font-bold'>Active</span>";
+      } else if (mode === 'logs') {
+        activeEngine.textContent = "Terminal Log Monitor Active";
+        item1.innerHTML = "<span>&bull; HTTP Proxy Traffic</span> <span class='text-[var(--fg)] font-mono'>200 OK</span>";
+        item2.innerHTML = "<span>&bull; Connection Port Bind</span> <span class='font-mono text-[10px]'>:2525</span>";
+      }
+    }
+
+    // Interactive request translator simulator
+    function triggerInteractiveTranslation() {
+      const anthropicReqText = document.getElementById('anthropic-request-code').value;
+      const payloadView = document.getElementById('translated-payload-view');
+      const routeTargetLabel = document.getElementById('route-output-target');
+
+      try {
+        const parsed = JSON.parse(anthropicReqText);
+        let transformed = {
+          model: "auto",
+          messages: parsed.messages || [],
+          max_tokens: parsed.max_tokens || 512,
+          temperature: 0.0
+        };
+
+        // Determine destination based on model key input
+        if (parsed.model && parsed.model.startsWith('claude-')) {
+          transformed.model = parsed.model;
+          routeTargetLabel.textContent = "Anthropic Cloud Bridge";
+        } else if (parsed.model && parsed.model.startsWith('gpt-')) {
+          transformed.model = parsed.model;
+          routeTargetLabel.textContent = "OpenAI GPT Endpoint";
+        } else {
+          routeTargetLabel.textContent = "Local MLX Engine (Auto)";
+        }
+
+        payloadView.textContent = JSON.stringify(transformed, null, 2);
+      } catch (err) {
+        payloadView.textContent = "Parsing Exception: Please input a valid JSON dictionary payload to test translation capabilities.";
+      }
+    }
+
+    // Clipboard copy assistant
+    function copyToClipboard(sourceId, statusId) {
+      const codeText = document.getElementById(sourceId).innerText;
+      const el = document.createElement('textarea');
+      el.value = codeText;
+      document.body.appendChild(el);
+      el.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          const statusText = document.getElementById(statusId);
+          statusText.textContent = "Copied Success!";
+          setTimeout(() => {
+            statusText.textContent = "Copy Script";
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Unable to capture script block copy.', err);
+      }
+      document.body.removeChild(el);
+    }
+  </script>
+</body>
+</html>

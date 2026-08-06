@@ -1,0 +1,47 @@
+---
+title: Quickstart
+description: Send your first request to the gateway
+hidden: false
+---
+
+## 1. Start PaglaMLX and load a model
+
+Open the app from the menu bar and load at least one local model. Once
+loaded, confirm the gateway is up:
+
+```bash
+curl http://127.0.0.1:2525/v1
+```
+
+You should get back `{"status": "ok"}`.
+
+## 2. List what's loaded
+
+```bash
+curl http://127.0.0.1:2525/v1/models
+```
+
+## 3. Send a chat request
+
+Use `"model": "auto"` to let the Auto-Router choose a local model for
+you, based on the shape of your request:
+
+```bash
+curl http://127.0.0.1:2525/v1/chat/completions \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
+  -d '{
+    "model": "auto",
+    "messages": [{"role": "user", "content": "What is MLX?"}]
+  }'
+```
+
+The `Authorization` header is only required if you've turned on the
+Bearer-token guard in Settings -> Network. If you haven't, you can
+drop that line entirely.
+
+## Next steps
+
+- Browse the full [API reference](/api-reference) for every parameter
+  and response shape, including streaming.
+- Read [Model routing](/concepts/routing) to route specific model
+  names to specific local models or cloud providers.

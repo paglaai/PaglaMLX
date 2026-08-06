@@ -1,0 +1,46 @@
+paths:
+  /messages:
+    post:
+      x-fern-examples:
+        - request:
+            model: gpt-4o-mini
+            messages:
+              - {}
+              - {}
+            max_tokens: 150
+          response:
+            body:
+              id: msg-1234567890abcdef
+              type: message
+              role: assistant
+              content:
+                - type: text
+                  text: Hello! How can I assist you today?
+              stop_reason: end_turn
+              usage:
+                input_tokens: 45
+                output_tokens: 20
+  /chat/completions:
+    post:
+      x-fern-examples:
+        - request:
+            model: auto
+            messages:
+              - role: user
+                content: What is MLX?
+            stream: true
+          response:
+            body:
+              id: chatcmpl-7a8b9c0d1e2f3g4h5i6j7k8l
+              object: chat.completion
+              choices:
+                - index: 0
+                  message:
+                    role: assistant
+                    content: MLX is a local reverse proxy for machine learning models on Apple Silicon, providing an OpenAI-compatible API surface and routing requests to local or cloud models.
+                    tool_calls: []
+                  finish_reason: stop
+              usage:
+                prompt_tokens: 12
+                completion_tokens: 28
+                total_tokens: 40

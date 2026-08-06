@@ -1,0 +1,10 @@
+# git-filter-repo replace rules
+# Format: <old>==><new>
+LengtaMLX==>PaglaMLX
+Lengta==>Pagla
+dist/LengtaMLX==>dist/PaglaMLX
+build/LengtaMLX==>build/PaglaMLX
+refactor: rename project from LengtaMLX to PaglaMLX==>refactor: rename project to PaglaMLX
+chore: remove tracked dist/LengtaMLX binary==>chore: remove tracked dist/PaglaMLX binary
+chore: add build output directory for LengtaMLX==>chore: add build output directory for PaglaMLX
+Fix: static files go to build root, not build/LengtaMLX/ subdir==>Fix: static files go to build root (was build/LengtaMLX/ subdir)

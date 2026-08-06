@@ -1,0 +1,21 @@
+---
+title: Introduction
+description: What PaglaMLX is and how the gateway fits into your workflow
+hidden: false
+---
+
+**PaglaMLX** is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. It manages background model server processes and runs a smart reverse proxy gateway at `127.0.0.1:2525/v1` that speaks both OpenAI and Anthropic API formats natively. Point any compatible developer client (like VS Code, Claude Desktop, or Continue) at the gateway to route requests dynamically to your active local model, or fall back to cloud providers when needed.
+
+The proxy gateway speaks two dialects:
+
+- An **OpenAI-compatible** surface, so any tool built for the OpenAI
+  API can point at your local models with no code changes.
+- An **Anthropic-compatible** surface, so Claude-native clients can do
+  the same.
+
+Every request carries a `model` field. The gateway reads that field
+and decides, per request, whether to serve it from a model already
+loaded on your machine or forward it to a cloud provider like OpenAI,
+Anthropic, Gemini, OpenRouter, Groq, or Together AI. See
+[Model routing](/concepts/routing) for the exact order those checks
+run in.

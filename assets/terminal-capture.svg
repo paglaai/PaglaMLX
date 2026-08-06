@@ -1,0 +1,40 @@
+<svg width="1000" height="420" viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#141820"/>
+      <stop offset="100%" stop-color="#0e1115"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <rect x="40" y="40" width="920" height="340" rx="12" fill="url(#bgGrad)" filter="url(#shadow)" stroke="#2a2e37" stroke-width="1"/>
+  
+  <!-- Window Controls -->
+  <circle cx="65" cy="65" r="6" fill="#ff5f56"/>
+  <circle cx="85" cy="65" r="6" fill="#ffbd2e"/>
+  <circle cx="105" cy="65" r="6" fill="#27c93f"/>
+
+  <!-- Title -->
+  <text x="500" y="69" text-anchor="middle" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#6B7280" font-weight="500">paglamlx — serve</text>
+  
+  <!-- Content -->
+  <g font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#E5E7EB">
+    <text x="65" y="115"><tspan fill="#34D399">~</tspan> $ paglamlx serve</text>
+    
+    <text x="65" y="145"><tspan fill="#60A5FA">[INFO]</tspan> Starting PaglaMLX orchestrator...</text>
+    <text x="65" y="165"><tspan fill="#60A5FA">[INFO]</tspan> Discovered 3 local MLX models in ~/.cache/huggingface/hub</text>
+    <text x="65" y="185"><tspan fill="#60A5FA">[INFO]</tspan> Loading <tspan fill="#FBBF24">mlx-community/Llama-3.2-3B-Instruct-4bit</tspan> into Unified Memory (Metal)...</text>
+    <text x="65" y="205"><tspan fill="#34D399">[SUCCESS]</tspan> Loaded in 1.42s</text>
+    <text x="65" y="225"><tspan fill="#60A5FA">[INFO]</tspan> Starting gateway on http://127.0.0.1:2525</text>
+    <text x="65" y="245"><tspan fill="#60A5FA">[INFO]</tspan> Routing layer ready. Unified API active.</text>
+    
+    <text x="65" y="285"><tspan fill="#9CA3AF">&gt; GET /v1/models</tspan></text>
+    <text x="65" y="305"><tspan fill="#A78BFA">[200 OK]</tspan> <tspan fill="#9CA3AF">24ms</tspan></text>
+
+    <text x="65" y="335"><tspan fill="#9CA3AF">&gt; POST /v1/chat/completions (model: Llama-3.2-3B-Instruct-4bit)</tspan></text>
+    <text x="65" y="355"><tspan fill="#A78BFA">[200 OK]</tspan> <tspan fill="#9CA3AF">42ms</tspan> (ttft: <tspan fill="#34D399">18ms</tspan>, 64 tokens/sec)</text>
+  </g>
+</svg>

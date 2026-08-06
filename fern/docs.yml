@@ -1,0 +1,37 @@
+instances:
+  - url: https://docs.buildwithfern.com/paglaai/paglamlx
+
+title: PaglaMLX
+
+colors:
+  accentPrimary: "#1D9E75"
+  background: "#12151A"
+
+logo:
+  dark: ./assets/logo-dark.svg
+  light: ./assets/logo-light.svg
+
+tabs:
+  home:
+    display-name: Docs
+    icon: home
+  api-reference:
+    display-name: API Reference
+    icon: puzzle
+
+navigation:
+  - tab: home
+    layout:
+      - section: Get started
+        contents:
+          - page: Introduction
+            path: pages/introduction.mdx
+          - page: Quickstart
+            path: pages/quickstart.mdx
+      - section: Concepts
+        contents:
+          - page: Model routing
+            path: pages/routing.mdx
+  - tab: api-reference
+    layout:
+      - api: PaglaMLX Gateway API

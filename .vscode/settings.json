@@ -1,0 +1,7 @@
+{
+    "cSpell.caseSensitive": true,
+    "accessibility.signalOptions.debouncePositionChanges": true,
+    "accessibility.openChatEditedFiles": true,
+    "explorer.excludeGitIgnore": true,
+    "explorer.fileNesting.enabled": true
+}

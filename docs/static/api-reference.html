@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PaglaMLX API reference</title>
+<style>
+  :root {
+    --bg: #12151a;
+    --surface: #1a1e25;
+    --surface-2: #20252d;
+    --border: #2a2f38;
+    --text: #e8e9ec;
+    --text-secondary: #9aa1ad;
+    --text-muted: #6b7280;
+    --teal: #5dcaa5;
+    --teal-dark: #04342c;
+    --coral: #f0997b;
+    --coral-dark: #4a1b0c;
+    --purple: #7f77dd;
+    --purple-dark: #26215c;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub { color: var(--text-secondary); font-size: 14px; margin: 0 0 1.5rem; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem; border-bottom: 1px solid var(--border);
+  }
+  .baseurl { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 14px; }
+  .baseurl span.dot { color: var(--teal); }
+  #status-pill {
+    display: flex; align-items: center; gap: 6px; font-size: 13px;
+    padding: 5px 12px; border-radius: 999px; background: var(--surface);
+    color: var(--text-secondary); border: 1px solid var(--border);
+  }
+  #status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); display: inline-block; }
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab-btn {
+    border: none; background: none; padding: 10px 14px; font-size: 14px;
+    color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent;
+    white-space: nowrap; font-family: inherit;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--teal); font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .endpoint-card {
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card-teal { background: var(--teal-dark); }
+  .card-coral { background: var(--coral-dark); }
+  .card-purple { background: var(--purple-dark); }
+  .method-line { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+  .method { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+  .card-teal .method { color: var(--teal); }
+  .card-coral .method { color: var(--coral); }
+  .card-purple .method { color: var(--purple); }
+  code { font-family: var(--mono); font-size: 13px; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; }
+  .path { font-family: var(--mono); font-size: 14px; }
+  .card-teal .path { color: #cfeee2; }
+  .card-coral .path { color: #fbdccb; }
+  .card-purple .path { color: #d7d4f5; }
+  p.desc { font-size: 13px; margin: 0; color: #d6d6d6; }
+  pre {
+    background: var(--surface-2); border-radius: 8px; padding: 12px 14px;
+    font-size: 12.5px; font-family: var(--mono); overflow-x: auto;
+    white-space: pre-wrap; margin: 0 0 12px; border: 1px solid var(--border);
+    color: #d8dbe0;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 500; }
+  ol.routing { font-size: 13.5px; padding-left: 20px; margin: 0 0 16px; }
+  ol.routing li { margin-bottom: 8px; }
+  ol.routing strong { color: var(--text); }
+  .label { font-size: 13px; color: var(--text-secondary); margin: 12px 0 6px; }
+  input, textarea, button {
+    font-family: inherit; font-size: 14px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--text); border-radius: 8px;
+    padding: 8px 10px;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--teal); }
+  button {
+    cursor: pointer; font-weight: 500; background: var(--surface-2);
+  }
+  button:hover { background: var(--border); }
+  .tryit-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .tryit-row input { flex: 1; }
+  textarea { width: 100%; min-height: 60px; margin-bottom: 10px; resize: vertical; }
+  footer { margin-top: 2rem; font-size: 12px; color: var(--text-muted); }
+  footer a { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p style="margin:0 0 12px;font-size:13px;"><a href="index.html" style="color:var(--teal);text-decoration:none;">&larr; Back to PaglaMLX</a></p>
+  <h1>PaglaMLX API reference</h1>
+  <p class="sub">Local LLM orchestration for Apple Silicon — sourced from the project's docs site.</p>
+
+  <div class="topbar">
+    <div class="baseurl"><span class="dot">●</span> http://127.0.0.1:2525/v1</div>
+    <div id="status-pill">
+      <span id="status-dot"></span>
+      <span id="status-text">Checking gateway…</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="chat">Chat completions</button>
+    <button class="tab-btn" data-tab="messages">Messages</button>
+    <button class="tab-btn" data-tab="models">Models</button>
+    <button class="tab-btn" data-tab="routing">Routing</button>
+    <button class="tab-btn" data-tab="tryit">Try it</button>
+  </div>
+
+  <div class="tab-panel active" data-panel="chat">
+    <div class="endpoint-card card-teal">
+      <div class="method-line"><span class="method">POST</span><span class="path">/v1/chat/completions</span></div>
+      <p class="desc">Standard OpenAI-compatible endpoint. Accepts all common parameters.</p>
+    </div>
+    <table>
+      <tr><th>Parameter</th><th>Type</th><th>Default</th></tr>
+      <tr><td><code>model</code></td><td>string</td><td>required</td></tr>
+      <tr><td><code>messages</code></td><td>array</td><td>required</td></tr>
+      <tr><td><code>temperature</code></td><td>number</td><td>0.0</td></tr>
+      <tr><td><code>top_p</code></td><td>number</td><td>1.0</td></tr>
+      <tr><td><code>top_k</code></td><td>integer</td><td>0</td></tr>
+      <tr><td><code>min_p</code></td><td>number</td><td>0.0</td></tr>
+      <tr><td><code>max_tokens</code></td><td>integer</td><td>512</td></tr>
+      <tr><td><code>stream</code></td><td>boolean</td><td>false</td></tr>
+    </table>
+    <p class="label">Message roles: <code>system</code>, <code>user</code>, <code>assistant</code>, <code>tool</code></p>
+    <p class="label">Response (non-streaming)</p>
+    <pre>{
+  "id": "chatcmpl-xxx",
+  "object": "chat.completion",
+  "choices": [
+    {"index": 0, "message": {"role": "assistant", "content": "Hello!"}, "finish_reason": "stop"}
+  ],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 8, "total_tokens": 20}
+}</pre>
+    <p class="label">Streaming response (SSE)</p>
+    <pre>data: {"choices":[{"delta":{"role":"assistant"}}]}
+data: {"choices":[{"delta":{"content":"Hello"}}]}
+data: [DONE]</pre>
+    <p class="label">Example</p>
+    <pre>curl http://127.0.0.1:2525/v1/chat/completions \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"What is MLX?"}],"stream":true}'</pre>
+  </div>
+
+  <div class="tab-panel" data-panel="messages">
+    <div class="endpoint-card card-coral">
+      <div class="method-line"><span class="method">POST</span><span class="path">/v1/messages</span></div>
+      <p class="desc">Translates Anthropic-format requests to OpenAI format and back, so Claude Desktop and other Anthropic-native clients can talk to local models.</p>
+    </div>
+    <table>
+      <tr><th>Parameter</th><th>Type</th><th>Notes</th></tr>
+      <tr><td><code>model</code></td><td>string</td><td>Model name, <code>auto</code>, or routing prefix</td></tr>
+      <tr><td><code>messages</code></td><td>array</td><td>Anthropic-format messages</td></tr>
+      <tr><td><code>system</code></td><td>string</td><td>System prompt, top-level field</td></tr>
+      <tr><td><code>max_tokens</code></td><td>integer</td><td>Required by Anthropic's spec</td></tr>
+      <tr><td><code>stream</code></td><td>boolean</td><td>Enable SSE streaming</td></tr>
+    </table>
+    <p class="label">Content blocks (text, image) and tool calls translate bidirectionally: Anthropic <code>tool_use</code> ↔ OpenAI <code>tool_calls</code>; Anthropic <code>tool_result</code> ↔ OpenAI <code>tool</code> role.</p>
+    <p class="label">Streaming response (SSE, Anthropic format)</p>
+    <pre>data: {"type":"content_block_start","content_block":{"type":"text","text":""}}
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello"}}
+data: {"type":"message_stop"}</pre>
+    <p class="label">Example</p>
+    <pre>curl http://127.0.0.1:2525/v1/messages \
+  -H "Authorization: Bearer $(defaults read com.paglaai.app apiKey)" \
+  -d '{"model":"auto","max_tokens":1024,"messages":[{"role":"user","content":"Hello!"}]}'</pre>
+  </div>
+
+  <div class="tab-panel" data-panel="models">
+    <div class="endpoint-card card-teal">
+      <div class="method-line"><span class="method">GET</span><span class="path">/v1/models</span></div>
+      <p class="desc">Lists models currently loaded and running as <code>mlx_lm.server</code> processes. Model IDs match directory names in your models directory.</p>
+    </div>
+    <pre>{"object":"list","data":[{"id":"Llama-3.2-3B-Instruct-4bit","object":"model"}]}</pre>
+    <div class="endpoint-card card-purple">
+      <div class="method-line"><span class="method">GET</span><span class="path">/v1</span></div>
+      <p class="desc">Health check. Returns <code>{"status":"ok"}</code> when the gateway is running.</p>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="routing">
+    <p class="label" style="margin-top:0;">On every request, the gateway checks these in order and stops at the first match.</p>
+    <ol class="routing">
+      <li><strong>Local exact match</strong> — model name is a key in <code>~/.paglamlx/routes.json</code></li>
+      <li><strong>Local substring match</strong> — name contains, or is contained in, a local route key</li>
+      <li><strong>Prefix-based cloud routing</strong> — see table below</li>
+      <li><strong>Free Router</strong> — if enabled in Settings → Cloud, falls through to OpenRouter</li>
+      <li><strong>Session stickiness</strong> — reuses this session's previous backend, if any</li>
+      <li><strong>Local default fallback</strong> — first available local model</li>
+      <li><strong>503</strong> — nothing matched</li>
+    </ol>
+    <table>
+      <tr><th>Prefix</th><th>Routes to</th><th>Needs key</th></tr>
+      <tr><td><code>gpt-, o1, o3</code></td><td>OpenAI</td><td><code>OPENAI_KEY</code></td></tr>
+      <tr><td><code>claude-</code></td><td>Anthropic</td><td><code>ANTHROPIC_KEY</code></td></tr>
+      <tr><td><code>gemini-</code></td><td>Gemini</td><td><code>GEMINI_KEY</code></td></tr>
+      <tr><td><code>openrouter/</code></td><td>OpenRouter</td><td><code>OPENROUTER_KEY</code></td></tr>
+      <tr><td><code>groq/</code></td><td>Groq</td><td><code>GROQ_KEY</code></td></tr>
+      <tr><td><code>together/</code></td><td>Together AI</td><td><code>TOGETHER_KEY</code></td></tr>
+    </table>
+    <p class="label"><strong style="color:var(--text);">Auto-Router</strong> (<code>model: "auto"</code>) picks a local model by: multimodal need → long context need → coder/math keyword intent → your configured default.</p>
+  </div>
+
+  <div class="tab-panel" data-panel="tryit">
+    <p class="label" style="margin-top:0;">Sends a real request to your gateway, if PaglaMLX is running on this machine and this page is opened in a browser that can reach localhost.</p>
+    <div class="tryit-row">
+      <input id="tryit-model" type="text" placeholder="auto" value="auto" />
+      <input id="tryit-key" type="text" placeholder="API key (optional)" />
+    </div>
+    <textarea id="tryit-msg" placeholder="Say hello"></textarea>
+    <button id="tryit-send">Send request</button>
+    <p class="label">Response</p>
+    <pre id="tryit-result">Response will appear here.</pre>
+  </div>
+
+  <footer>
+    Sourced from <a href="index.html">paglaai.github.io/PaglaMLX</a> &bull;
+    <a href="https://docs.buildwithfern.com/paglaai/paglamlx">Fern Docs</a> &bull;
+    <a href="https://github.com/paglaai/PaglaMLX">GitHub</a>.
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    var tab = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-panel').forEach(function(p){
+      p.classList.toggle('active', p.getAttribute('data-panel') === tab);
+    });
+  });
+});
+
+fetch('http://127.0.0.1:2525/v1').then(function(r){
+  var dot = document.getElementById('status-dot');
+  var txt = document.getElementById('status-text');
+  if (r.ok) {
+    dot.style.background = '#5dcaa5';
+    txt.textContent = 'Gateway online';
+  } else {
+    txt.textContent = 'Gateway unreachable';
+  }
+}).catch(function(){
+  document.getElementById('status-text').textContent = 'Gateway unreachable';
+});
+
+document.getElementById('tryit-send').addEventListener('click', function(){
+  var out = document.getElementById('tryit-result');
+  var model = document.getElementById('tryit-model').value || 'auto';
+  var key = document.getElementById('tryit-key').value;
+  var msg = document.getElementById('tryit-msg').value || 'Say hello';
+  out.textContent = 'Sending…';
+  var headers = {'Content-Type': 'application/json'};
+  if (key) headers['Authorization'] = 'Bearer ' + key;
+  fetch('http://127.0.0.1:2525/v1/chat/completions', {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({model: model, messages: [{role: 'user', content: msg}]})
+  }).then(function(r){ return r.text(); }).then(function(t){
+    out.textContent = t;
+  }).catch(function(){
+    out.textContent = 'Could not reach the gateway at 127.0.0.1:2525. Make sure PaglaMLX is running and a model is loaded, and that this HTML file is opened locally (not from a restricted sandbox).';
+  });
+});
+</script>
+</body>
+</html>

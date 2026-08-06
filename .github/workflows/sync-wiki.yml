@@ -1,0 +1,244 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'Sources/**/*.swift'
+      - '.github/workflows/sync-wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    name: Generate & sync Wiki pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Wiki pages
+        run: |
+          mkdir -p wiki
+
+          # --- Home.md ---
+          cat > wiki/Home.md << 'WIKIEOF'
+          # PaglaMLX
+
+          Native macOS inference gateway for Apple Silicon — local LLM orchestration with zero recurring cost.
+
+          ## Quick Start
+
+          1. **Download** the latest DMG from [Releases](https://github.com/paglaai/PaglaMLX/releases)
+          2. **Mount** `/Volumes/CastingC0UCH/M0DEL/MLX/` with your MLX models
+          3. **Launch** PaglaMLX — runs as a menu-bar app on port **2525**
+          4. **Point** any OpenAI-compatible client at `http://localhost:2525/v1`
+
+          ## Features
+
+          - **Auto-Router** — local MLX inference by default, cloud failover with 10+ providers
+          - **BYOK** — bring your own API keys (OpenRouter, Groq, Together, etc.)
+          - **Model warm-pool** — keep a model hot for low-latency first requests
+          - **System monitor** — thermal + memory pressure in menu bar
+          - **Activity dashboard** — request metrics, model lifecycle, export CSV/JSON
+          - **Dark erotica mode** — uncensored local inference for G0NDHOM writers
+          WIKIEOF
+
+          # --- Architecture.md ---
+          cat > wiki/Architecture.md << 'WIKIEOF'
+          # Architecture
+
+          PaglaMLX is a SwiftUI menu-bar app that manages a local MLX inference subprocess and a smart reverse proxy.
+
+          ## Components
+
+          ```
+          ┌──────────────┐     ┌──────────────────────┐
+          │  Client App  │────▶│  PaglaMLX (port 2525)│
+          └──────────────┘     │  ┌────────────────┐  │
+                               │  │ RoutingGateway │  │
+                               │  ├────────────────┤  │
+                               │  │ ModelOrchestr. │  │
+                               │  ├────────────────┤  │
+                               │  │ SystemMonitor  │  │
+                               │  ├────────────────┤  │
+                               │  │ EventRecorder  │  │
+                               │  └────────────────┘  │
+                               └──────────────────────┘
+          ```
+
+          - **RoutingGateway** — upstream local MLX process; falls back through 10+ cloud providers
+          - **ModelOrchestrator** — launches/stops MLX subprocess, warm-pool, auto-restart with backoff
+          - **SystemMonitor** — polls `ProcessInfo.thermalState` + `host_statistics` every 5s
+          - **EventRecorder** — append-only JSONL log of all requests
+
+          ## Data Flow
+
+          1. Client sends `POST /v1/chat/completions` to `localhost:2525`
+          2. RoutingGateway checks health — tries local MLX first, then cloud providers
+          3. Response streamed back to client
+          4. EventRecorder logs request to `~/Library/Application Support/PaglaMLX/events.jsonl`
+          WIKIEOF
+
+          # --- Configuration.md ---
+          cat > wiki/Configuration.md << 'WIKIEOF'
+          # Configuration
+
+          ## API Keys
+
+          Set keys in Settings → Providers:
+
+          | Provider     | Key Field           | Free Tier                        |
+          |--------------|---------------------|----------------------------------|
+          | Local MLX    | (none)              | Always free, needs models on SSD |
+          | OpenRouter   | `OPENROUTER_API_KEY`| $1 free credit                   |
+          | Groq         | `GROQ_API_KEY`      | Rate-limited free tier           |
+          | Together     | `TOGETHER_API_KEY`  | $0.25 free credit                |
+          | GitHub       | `GITHUB_TOKEN`      | Free (rate-limited)              |
+          | HuggingFace  | `HF_TOKEN`          | Free inference API               |
+          | Fireworks    | `FIREWORKS_API_KEY` | Free tier available              |
+          | DeepSeek     | `DEEPSEEK_API_KEY`  | Pay-as-you-go                    |
+          | Perplexity   | `PERPLEXITY_API_KEY`| $5 credit on signup              |
+          | Google Gemini| `GEMINI_API_KEY`    | Free tier (60 req/min)           |
+
+          ## Port
+
+          Default: `2525`. Change via the `PAGLA_PORT` env var.
+
+          ## Model Path
+
+          Models read from `/Volumes/CastingC0UCH/M0DEL/MLX/` by default.
+          Override with `MLX_MODEL_PATH` env var.
+          WIKIEOF
+
+          # --- API-Reference.md ---
+          cat > wiki/API-Reference.md << 'WIKIEOF'
+          # API Reference
+
+          PaglaMLX exposes an OpenAI-compatible REST API at `http://localhost:2525`.
+
+          ## Endpoints
+
+          ### POST /v1/chat/completions
+
+          Standard OpenAI chat completions. Request body:
+
+          ```json
+          {
+            "model": "llama-3.2-3b-mlx",
+            "messages": [{"role": "user", "content": "Hello"}],
+            "temperature": 0.7,
+            "max_tokens": 2048,
+            "stream": true
+          }
+          ```
+
+          ### GET /v1/models
+
+          List available local models.
+
+          ### GET /v1/health
+
+          System health — model status, thermal state, memory pressure.
+
+          ### GET /v1/dashboard
+
+          Activity metrics, request counts, average latency.
+
+          ### GET /v1/api-reference
+
+          HTML page with full endpoint documentation.
+
+          ### POST /v1/warm-model
+
+          Pre-load a model into memory:
+
+          ```json
+          {"model": "llama-3.2-3b-mlx"}
+          ```
+
+          ### POST /v1/switch-model
+
+          Switch active model at runtime:
+
+          ```json
+          {"model": "mistral-7b-mlx"}
+          ```
+          WIKIEOF
+
+          # --- _Sidebar.md ---
+          cat > wiki/_Sidebar.md << 'WIKIEOF'
+          * [Home](Home)
+          * [Architecture](Architecture)
+          * [Configuration](Configuration)
+          * [API Reference](API-Reference)
+          * [Contributing](Contributing)
+          WIKIEOF
+
+          # --- Contributing.md ---
+          cat > wiki/Contributing.md << 'WIKIEOF'
+          # Contributing
+
+          See [CONTRIBUTING.md](https://github.com/paglaai/PaglaMLX/blob/main/CONTRIBUTING.md) on GitHub.
+
+          ## Development Setup
+
+          ```bash
+          git clone https://github.com/paglaai/PaglaMLX.git
+          cd PaglaMLX
+          swift build
+          swift test
+          ```
+
+          ## Build DMG
+
+          ```bash
+          bash build_dmg.sh
+          ```
+
+          ## CI/CD
+
+          - **CI** — builds + tests every push/PR (macOS 15 runner)
+          - **Release** — triggered by `v*` tags, builds DMG, publishes to GitHub Releases
+          WIKIEOF
+
+      - name: Check wiki repo exists
+        id: check-wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/paglaai/PaglaMLX.wiki.git"
+          if git ls-remote --exit-code "$WIKI_URL" &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Wiki repo not yet initialized. Visit https://github.com/paglaai/PaglaMLX/wiki and create the first page to initialize it."
+          fi
+
+      - name: Push to wiki repo
+        if: steps.check-wiki.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "paglaai"
+          git config --global user.email "paglaai@users.noreply.github.com"
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/paglaai/PaglaMLX.wiki.git"
+          git clone "$WIKI_URL" wiki-push
+          cd wiki-push
+          cp -r ../wiki/* .
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to wiki"
+          else
+            git commit -m "sync wiki: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push origin master
+          fi
+
+      - name: Fallback — copy wiki to docs/
+        run: |
+          mkdir -p docs/wiki
+          cp wiki/*.md docs/wiki/
+          echo "Wiki pages copied to docs/wiki/ for GitHub Pages fallback"
