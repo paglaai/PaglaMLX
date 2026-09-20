@@ -1,51 +1,46 @@
-# Python Configuration
+# Runtime Configuration
 
-The Python tab in Settings manages the Python environment used to run `mlx_lm.server`.
+PaglaMLX v1.6.0 uses a native Swift runtime. The HTTP server, routing layer, model lifecycle, and MLX bridge run inside the application; Python is not required at runtime.
 
-## Auto-detection
+## Native runtime
 
-When you open the Python tab, PaglaMLX automatically searches for Python in these locations:
+The request path is:
 
-- Custom path (if previously set)
-- `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3`
-- `/Library/Frameworks/Python.framework/Versions/3.13/bin/python3`
-- `/opt/homebrew/bin/python3`
-- `/usr/local/bin/python3`
-- `/usr/bin/python3`
-
-If found, the version is displayed and the path is saved.
-
-## Manual configuration
-
-If auto-detection doesn't find your Python:
-
-1. Click **Detect** to retry.
-2. Or paste the full path to your Python binary in the text field.
-
-## Virtual environment
-
-The app checks if your Python is inside a virtual environment (`.venv/`, `venv/`, or `.virtualenvs/`). Using a venv is recommended to keep dependencies isolated:
-
-```bash
-python3 -m venv ~/.venv/paglamlx
-source ~/.venv/paglamlx/bin/activate
-pip3 install mlx-lm fastapi uvicorn httpx
+```text
+Client → Swift-NIO HTTP server → routing core → MLX C++ bridge → Apple Silicon GPU
 ```
 
-## Required packages
+The default local endpoint is `http://127.0.0.1:2525/v1`.
 
-| Package   | Purpose                        |
-|-----------|--------------------------------|
-| `mlx-lm`  | Local model serving on Apple Silicon |
-| `fastapi` | HTTP server for the model API  |
-| `uvicorn` | ASGI server runner             |
-| `httpx`   | Async HTTP client (gateway)    |
+## Model directory
 
-## Status indicators
+Configure the directory containing MLX-compatible model subdirectories in **Settings → App**. PaglaMLX discovers model weights and configuration files, then loads the selected model through the native engine.
 
-| Status         | Meaning                          |
-|----------------|----------------------------------|
-| ✅ Valid      | Python found and working         |
-| ⚠️ Invalid    | No working Python found          |
-| 🔄 Checking   | Detection in progress            |
-| ○ Unchecked   | Not yet verified                 |
+## Build-time toolchain
+
+When building from source, use Xcode 15+ or Swift 5.9+ on macOS 14.0+ and Apple Silicon:
+
+```bash
+swift build -c release
+```
+
+No `pip3`, `mlx-lm`, FastAPI, Uvicorn, or Python virtual environment is needed for the v1.6.0 application.
+
+## Runtime status
+
+| Status | Meaning |
+|---|---|
+| **Ready** | Native server and model engine are available. |
+| **Loading** | The selected model is being loaded through the MLX bridge. |
+| **Unavailable** | Check the model directory, Metal support, and application logs. |
+
+## Migration from v1.x
+
+Older releases stored provider credentials or bearer tokens in `UserDefaults`. v1.6.0 migrates known legacy keys to macOS Keychain on startup. The migration is idempotent and preserves the legacy value if the Keychain write fails.
+
+## Related pages
+
+- [Network configuration](network)
+- [Cloud provider credentials](cloud-byok)
+- [Architecture](../architecture)
+- [Building from source](../building)

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PaglaMLX — Local LLM Gateway for Apple Silicon</title>
+  <title>PaglaMLX v1.6.0 — Native Local LLM Runtime for Apple Silicon</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts -->
@@ -83,7 +83,7 @@
       </div>
       <div>
         <h1 class="text-xs font-mono font-bold tracking-widest uppercase">PAGLA / MLX</h1>
-        <p class="text-[9px] font-mono text-[var(--gray-muted)]">macOS local gateway core</p>
+        <p class="text-[9px] font-mono text-[var(--gray-muted)]">native Swift + MLX runtime</p>
       </div>
     </div>
 
@@ -95,7 +95,7 @@
       <a href="api-reference.html" class="hidden sm:inline text-xs font-mono hover:underline">
         API Reference &rarr;
       </a>
-      <a href="https://docs.buildwithfern.com/paglaai/paglamlx" target="_blank" class="hidden sm:inline text-xs font-mono hover:underline">
+      <a href="docs/introduction" class="hidden sm:inline text-xs font-mono hover:underline">
         Docs &rarr;
       </a>
       <a href="https://github.com/paglaai/PaglaMLX" target="_blank" class="hidden sm:inline text-xs font-mono hover:underline">
@@ -114,7 +114,7 @@
           Local LLM Orchestration,<br>Stripped of Overhead.
         </h2>
         <p class="text-sm md:text-base text-[var(--gray-muted)] font-light max-w-xl leading-relaxed">
-          <strong>PaglaMLX</strong> is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. It manages background model server processes and runs a smart reverse proxy gateway at <code>127.0.0.1:2525/v1</code> that speaks both OpenAI and Anthropic API formats natively. Point any compatible developer client (like VS Code, Claude Desktop, or Continue) at the gateway to route requests dynamically to your active local model, or fall back to cloud providers when needed.
+          <strong>PaglaMLX</strong> is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. The Swift runtime combines the menu-bar app, HTTP server, scheduler, and model engine in one process, with a narrow C++ FFI boundary into MLX. Its OpenAI- and Anthropic-compatible gateway at <code>127.0.0.1:2525/v1</code> routes requests to local models or configured cloud providers without a Python sidecar.
         </p>
       </div>
       
@@ -123,7 +123,7 @@
         <div class="space-y-1 font-mono text-xs">
           <div class="flex justify-between">
             <span class="text-[var(--gray-muted)]">VERSION</span>
-            <span class="font-bold">1.3.0 Stable</span>
+            <span class="font-bold">1.6.0 Stable</span>
           </div>
           <div class="flex justify-between">
             <span class="text-[var(--gray-muted)]">DEFAULT PORT</span>
@@ -138,8 +138,11 @@
           <a href="api-reference.html" class="block text-center text-xs font-mono font-bold stark-border py-2 text-[var(--bg)] bg-[var(--fg)] hover:bg-[var(--bg)] hover:text-[var(--fg)] smooth-transition">
             API REFERENCE &bull; TRY IT LIVE
           </a>
-          <a href="https://docs.buildwithfern.com/paglaai/paglamlx" target="_blank" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
-            FULL DOCS &bull; FERN
+          <a href="docs/architecture" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+            ARCHITECTURE &bull; SWIFT + FFI
+          </a>
+          <a href="https://github.com/paglaai/PaglaMLX/blob/main/ROADMAP.md" target="_blank" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
+            ROADMAP &bull; V1.6 → 2.0
           </a>
           <a href="#quickstart" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
             QUICK START &bull; TERMINAL
@@ -239,7 +242,7 @@
       </div>
 
       <p class="text-xs text-[var(--gray-muted)] max-w-xl">
-        The gateway understands both OpenAI and Anthropic API shapes. Point Claude-native clients (like Claude Desktop) or OpenAI clients at the exact same port. Watch the real-time translation block below.
+        The native Swift gateway understands both OpenAI and Anthropic API shapes. Point Claude-native clients (like Claude Desktop) or OpenAI clients at the exact same port. Watch the real-time translation block below.
       </p>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -294,7 +297,7 @@
     <section class="space-y-6">
       <div class="stark-border-b pb-4">
         <span class="text-[10px] font-mono tracking-widest text-[var(--gray-muted)] uppercase">&bull; Priority Priority Cascade</span>
-        <h3 class="text-lg font-bold uppercase tracking-tight">The Resolution Architecture</h3>
+        <h3 class="text-lg font-bold uppercase tracking-tight">The Native Resolution Architecture</h3>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
@@ -344,8 +347,8 @@
           </button>
         </div>
 
-        <pre id="quick-start-command" class="font-mono text-xs p-4 bg-[var(--gray-light)] overflow-x-auto text-[var(--fg)] leading-relaxed"># Verify gateway health
-curl http://127.0.0.1:2525/v1
+        <pre id="quick-start-command" class="font-mono text-xs p-4 bg-[var(--gray-light)] overflow-x-auto text-[var(--fg)] leading-relaxed"># Verify the native Swift gateway
+	curl http://127.0.0.1:2525/v1
 
 # Dispatch query to Auto-Router
 curl http://127.0.0.1:2525/v1/chat/completions \
@@ -364,12 +367,16 @@ curl http://127.0.0.1:2525/v1/chat/completions \
       <div class="flex items-center gap-3">
         <span class="font-mono font-bold text-[var(--fg)]">PAGLAMLX</span>
         <span>&bull;</span>
-        <span>Local inference gateway for Apple Silicon architecture.</span>
+        <span>Native Swift + C++ FFI inference gateway for Apple Silicon.</span>
       </div>
       <div class="flex gap-4 font-mono text-[11px]">
         <a href="api-reference.html" class="underline text-[var(--fg)]">API Reference</a>
         <span>&bull;</span>
-        <a href="https://docs.buildwithfern.com/paglaai/paglamlx" target="_blank" class="underline text-[var(--fg)]">Docs</a>
+        <a href="docs/introduction" class="underline text-[var(--fg)]">Docs</a>
+        <span>&bull;</span>
+        <a href="docs/architecture" class="underline text-[var(--fg)]">Architecture</a>
+        <span>&bull;</span>
+        <a href="https://github.com/paglaai/PaglaMLX/blob/main/ROADMAP.md" target="_blank" class="underline text-[var(--fg)]">Roadmap</a>
         <span>&bull;</span>
         <a href="https://github.com/paglaai/PaglaMLX" target="_blank" class="underline text-[var(--fg)]">GitHub</a>
       </div>

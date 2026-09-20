@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PaglaMLX API reference</title>
+<title>PaglaMLX v1.6.0 API reference</title>
 <style>
   :root {
     --bg: #12151a;
@@ -197,7 +197,7 @@ data: {"type":"message_stop"}</pre>
   <div class="tab-panel" data-panel="models">
     <div class="endpoint-card card-teal">
       <div class="method-line"><span class="method">GET</span><span class="path">/v1/models</span></div>
-      <p class="desc">Lists models currently loaded and running as <code>mlx_lm.server</code> processes. Model IDs match directory names in your models directory.</p>
+      <p class="desc">Lists models currently loaded by the native Swift engine through the MLX C++ bridge. Model IDs match the names shown in the model picker.</p>
     </div>
     <pre>{"object":"list","data":[{"id":"Llama-3.2-3B-Instruct-4bit","object":"model"}]}</pre>
     <div class="endpoint-card card-purple">
@@ -243,7 +243,7 @@ data: {"type":"message_stop"}</pre>
 
   <footer>
     Sourced from <a href="index.html">paglaai.github.io/PaglaMLX</a> &bull;
-    <a href="https://docs.buildwithfern.com/paglaai/paglamlx">Fern Docs</a> &bull;
+    <a href="docs/introduction">Documentation</a> &bull;
     <a href="https://github.com/paglaai/PaglaMLX">GitHub</a>.
   </footer>
 </div>
