@@ -24,12 +24,12 @@ Lists all models currently loaded and available.
 }
 ```
 
-The model IDs correspond to the names shown in the PaglaMLX model picker. Only models currently loaded by the native Swift engine through the MLX C++ bridge appear in this list.
+The model IDs correspond to the names shown in the PaglaMLX model picker. Only models currently loaded by Swift-managed `mlx_lm.server` processes appear in this list.
 
 ## Health check
 
 `GET /v1`
 
-Returns `{ "status": "ok" }` when the native Swift-NIO gateway is running.
+Returns `{ "status": "ok" }` when the Swift-managed gateway is running.
 
-Local model requests stay inside the PaglaMLX process; v1.6.0 does not launch a separate Python model server.
+Local model requests are dispatched from the gateway to the selected Python model server process.

@@ -32,4 +32,4 @@ The GitHub Actions workflow in `.github/workflows/deploy-docs.yml` runs `npm ci`
 
 ## Runtime note
 
-PaglaMLX v1.6.0 does not require a Python gateway, FastAPI, Uvicorn, or `mlx_lm.server` process at runtime.
+PaglaMLX v1.6.0 currently requires Python 3.12+ with `mlx-lm`, FastAPI, Uvicorn, and `httpx` at runtime. A future native Swift + MLX C++ FFI migration is tracked in the roadmap but is not yet shipped.

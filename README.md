@@ -48,7 +48,7 @@ cd PaglaMLX
 ./build_dmg.sh          # release build + .app + .dmg
 ```
 
-Requires macOS 14.0+ (Sonoma), Python 3.12+, and Apple Silicon (M1/M2/M3/M4).
+Requires macOS 14.0+ (Sonoma), Python 3.12+, and Apple Silicon (M1/M2/M3/M4). The current runtime uses Python model servers and gateway proxies managed by the native macOS app.
 
 ## Quickstart
 
@@ -77,7 +77,7 @@ Supports local text generation models, cloud fallback routing, and native protoc
 
 ### Model Orchestration
 - One-click load/unload from a directory of MLX models
-- Each model runs as an isolated `mlx_lm.server` on its own port
+- Each model runs as an isolated `mlx_lm.server` process on its own port
 - Route table updates live as models start and stop
 - Multiple concurrent models, dispatched by name
 
@@ -91,19 +91,23 @@ Supports local text generation models, cloud fallback routing, and native protoc
 
 ```
 ┌─────────────┐     ┌──────────────────────────────┐
-│  SwiftUI App │────▶│  RoutingGateway (Python)     │
+│  SwiftUI App │────▶│  RoutingGateway (Swift-managed Python) │
 │  (menu bar)  │     │  :2525  /v1/*                │
 └──────┬───────┘     │                              │
        │             │  ┌──────┐ ┌──────┐ ┌──────┐  │
        │ loads       │  │Local │ │Cloud │ │Free  │  │
        ▼             │  │Router│ │Router│ │Router│  │
 ┌─────────────┐      │  └──┬───┘ └──┬───┘ └──┬───┘  │
-│ mlx_lm proc │      │     │        │        │      │
+│ mlx_lm.server│      │     │        │        │      │
 │  per model   │◀────┘     ▼        ▼        ▼      │
 │ port 50xx    │        local    OpenAI  OpenRouter  │
 └─────────────┘        mlx_lm   Anthropic  Groq      │
                           proc    Gemini   Together   │
 ```
+
+## Architecture status
+
+The current release uses a SwiftUI macOS application that manages Python-based `mlx_lm.server` model processes and FastAPI/Uvicorn gateway proxies. A future native Swift + MLX FFI runtime is documented separately, but it is not yet the shipped runtime.
 
 ## Contributing
 Contributions are welcome! Please open an issue to discuss changes before submitting a PR.

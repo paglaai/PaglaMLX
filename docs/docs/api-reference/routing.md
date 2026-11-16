@@ -1,6 +1,6 @@
 # Routing
 
-The native Swift gateway dispatches requests based on the `model` field. This page documents the full routing logic.
+The Swift-managed Python gateway dispatches requests based on the `model` field. This page documents the full routing logic.
 
 ## Evaluation order
 
@@ -8,7 +8,7 @@ When a request arrives, the gateway checks the following in order:
 
 ### 1. Local exact match
 
-If the model name exactly matches a loaded engine, the request is dispatched to that in-process local model through the MLX C++ bridge.
+If the model name exactly matches a loaded route, the request is forwarded to that local `mlx_lm.server` process.
 
 ### 2. Auto-Router (`model=auto`)
 
@@ -42,11 +42,11 @@ The gateway tracks session IDs (from `x-session-id` or `authorization` header). 
 
 ### 5. Local default fallback
 
-If no match, the request is dispatched to the first available local engine.
+If no match, the request is forwarded to the first available local `mlx_lm.server` process.
 
 ### 6. 503
 
-If none of the above applies, the native gateway returns HTTP 503.
+If none of the above applies, the gateway returns HTTP 503.
 
 ## Token estimation
 

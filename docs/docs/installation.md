@@ -6,7 +6,7 @@
 - **Apple Silicon** (M1/M2/M3/M4 — MLX requires Metal)
 - **Xcode 15+ or Swift 5.9+** when building from source
 
-PaglaMLX v1.6.0 is a native Swift application. Python is not required at runtime.
+PaglaMLX v1.6.0 is a native macOS application that currently depends on Python model servers and gateway proxies at runtime.
 
 ## Download (recommended)
 
@@ -14,7 +14,11 @@ PaglaMLX v1.6.0 is a native Swift application. Python is not required at runtime
 2. Open the DMG and drag `PaglaMLX.app` to your Applications folder.
 3. Open the app and complete the local model setup in the menu bar.
 
-The v1.6.0 app includes the native Swift-NIO HTTP server and MLX C++ bridge. No Python gateway, `mlx_lm.server`, FastAPI, or Uvicorn installation is needed.
+The v1.6.0 app manages `mlx_lm.server` model processes and FastAPI/Uvicorn gateway proxies. Install Python 3.12+ with the required packages:
+
+```bash
+pip3 install mlx-lm fastapi uvicorn httpx
+```
 
 ## Build from source
 

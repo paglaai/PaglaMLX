@@ -1,4 +1,4 @@
-# PaglaMLX 2.0 Architecture
+# PaglaMLX Runtime Architecture
 
 **Status:** Living design document  
 **Audience:** Contributors, maintainers, integrators, and operators  
@@ -6,7 +6,7 @@
 
 ## 1. Scope and design goals
 
-PaglaMLX 2.0 is a native macOS inference service for Apple Silicon. The runtime is implemented in Swift, with a narrow C-compatible bridge into the MLX C++ runtime and a Swift-NIO HTTP server exposing an OpenAI-compatible API. The menu bar application, command-line interface, server, scheduler, and tests share the same headless core rather than communicating through a Python sidecar.
+PaglaMLX v1.6.0 is a native macOS application that orchestrates a Python-backed local inference runtime on Apple Silicon. Swift owns the menu-bar UI, settings, integrations, process lifecycle, and local configuration. Python processes provide model serving and protocol translation.
 
 The architecture optimizes for four properties: low process overhead, predictable memory use on 16 GB unified-memory Macs, a small security boundary, and testability without requiring model files or the production MLX runtime. Swift actors provide the default isolation boundary; the C ABI keeps ownership and interop explicit; and the server binds to loopback by default.
 
@@ -36,7 +36,7 @@ The normal native startup path is:
 5. `HTTPServer` is initialized with the pool and `HTTPServer.Configuration`, binds the configured loopback address, and transitions from `.starting` to `.running`.
 6. The process remains alive until cancellation or an operational stop command closes the server channel and stops the pool sweep.
 
-The application and the server may share the core in one process. The CLI is also able to host the same server without the UI. There is no Python gateway, uvicorn process, or HTTP hop between the server and the engine.
+The application owns the lifecycle of the gateway and model processes. The CLI can host the same operational flow without the UI. The shipped runtime includes a Python gateway, Uvicorn process, and HTTP hop between the gateway and each model server.
 
 ## 4. Request lifecycle
 
@@ -160,7 +160,7 @@ Tests must not depend on a developer’s Keychain. KeychainStore should receive 
 
 ## 12. Planned evolution
 
-The roadmap prioritizes documentation and secure storage first, then route integration tests, UI snapshots, and request coalescing. Later work includes token and cost tracking, onboarding, benchmarks, streaming backpressure, model warm pools, and a plugin SDK. The Python gateway is not a future compatibility target; the native Swift server is the supported runtime architecture.
+The roadmap prioritizes documentation and secure storage first, then route integration tests, UI snapshots, and request coalescing. Later work includes token and cost tracking, onboarding, benchmarks, streaming backpressure, model warm pools, and a plugin SDK. A future native Swift + MLX C++ FFI runtime may remove the Python gateway, but that migration is not shipped in v1.6.0.
 
 ## References
 

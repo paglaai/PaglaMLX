@@ -1,10 +1,10 @@
 # Getting Started
 
-This guide walks you through the minimal v1.6.0 setup: choose your models, load one in the native Swift runtime, and send your first request.
+This guide walks you through the minimal v1.6.0 setup: configure Python, choose your models, load one through the Swift-managed process runtime, and send your first request.
 
 ## 1. Install PaglaMLX
 
-Download the [v1.6.0 DMG](https://github.com/paglaai/PaglaMLX/releases/tag/v1.6.0), or [build from source](installation). Python is not required.
+Download the [v1.6.0 DMG](https://github.com/paglaai/PaglaMLX/releases/tag/v1.6.0), or [build from source](installation). Python 3.12+ is required by the current runtime.
 
 ## 2. Point to your models
 
@@ -35,7 +35,7 @@ Example structure:
 2. Select a model from the list.
 3. Press **Play**.
 
-The native Swift engine loads the selected model through the MLX C++ bridge and registers it in the route table. The status indicator turns green when it is ready.
+The app launches an `mlx_lm.server` process for the selected model and registers it in the route table. The status indicator turns green when it is ready.
 
 ## 4. Send a request
 

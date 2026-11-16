@@ -1,12 +1,13 @@
 # Building from Source
 
-PaglaMLX v1.6.0 is built as a native Swift package. The application, Swift-NIO HTTP server, routing core, credential store, and MLX bridge share one runtime; there is no Python gateway process to install or launch.
+PaglaMLX v1.6.0 is built as a native Swift application that currently manages Python model servers and FastAPI/Uvicorn gateway processes. Python dependencies must be installed before running the app.
 
 ## Prerequisites
 
 - Xcode 15+ or the Xcode Command Line Tools
 - Swift 5.9+
 - Apple Silicon macOS 14.0+
+- Python 3.12+ with `mlx-lm`, `fastapi`, `uvicorn`, and `httpx`
 
 ## Build
 
@@ -46,7 +47,8 @@ PaglaMLX/
 ├── Sources/
 │   ├── PaglaMLXApp.swift          # Menu-bar application entry point
 │   ├── PaglaMLXCore/              # Shared headless runtime
-│   │   ├── HTTPServer.swift       # Swift-NIO HTTP server
+│   │   ├── HTTPServer.swift       # Swift-side HTTP support
+│   │   ├── RoutingGateway.swift    # FastAPI/Uvicorn gateway launcher
 │   │   ├── EnginePool.swift       # Model lifecycle and routing pool
 │   │   ├── MLXBridge.h            # C-compatible MLX boundary
 │   │   ├── KeychainStore.swift    # macOS Keychain secret storage
@@ -63,7 +65,7 @@ PaglaMLX/
 └── ROADMAP.md
 ```
 
-## C++ FFI boundary
+## Current runtime boundary
 
 Swift owns request handling, routing, lifecycle, and error policy. MLX-specific work crosses a narrow C-compatible bridge into the C++ implementation. Keep ownership and error conversion explicit at this boundary; do not expose C++ types directly to Swift callers.
 

@@ -1,37 +1,38 @@
 # Runtime Configuration
 
-PaglaMLX v1.6.0 uses a native Swift runtime. The HTTP server, routing layer, model lifecycle, and MLX bridge run inside the application; Python is not required at runtime.
+PaglaMLX v1.6.0 uses Swift for macOS orchestration and Python for model serving and gateway translation. Python is required at runtime.
 
-## Native runtime
+## Runtime path
 
-The request path is:
+The current request path is:
 
 ```text
-Client → Swift-NIO HTTP server → routing core → MLX C++ bridge → Apple Silicon GPU
+Client → FastAPI/Uvicorn gateway → mlx_lm.server process → Apple Silicon GPU
 ```
 
 The default local endpoint is `http://127.0.0.1:2525/v1`.
 
 ## Model directory
 
-Configure the directory containing MLX-compatible model subdirectories in **Settings → App**. PaglaMLX discovers model weights and configuration files, then loads the selected model through the native engine.
+Configure the directory containing MLX-compatible model subdirectories in **Settings → App**. PaglaMLX discovers model weights and configuration files, then asks `mlx_lm.server` to load the selected model.
 
 ## Build-time toolchain
 
-When building from source, use Xcode 15+ or Swift 5.9+ on macOS 14.0+ and Apple Silicon:
+When building from source, use Xcode 15+ or Swift 5.9+ on macOS 14.0+ and Apple Silicon. Also install the Python runtime dependencies:
 
 ```bash
+pip3 install mlx-lm fastapi uvicorn httpx
 swift build -c release
 ```
 
-No `pip3`, `mlx-lm`, FastAPI, Uvicorn, or Python virtual environment is needed for the v1.6.0 application.
+Install the current runtime dependencies with `pip3 install mlx-lm fastapi uvicorn httpx`, then configure the detected Python binary in **Settings → Python**. The app uses that executable to launch `mlx_lm.server` and the gateway proxies.
 
 ## Runtime status
 
 | Status | Meaning |
 |---|---|
-| **Ready** | Native server and model engine are available. |
-| **Loading** | The selected model is being loaded through the MLX bridge. |
+| **Ready** | Gateway and model process are available. |
+| **Loading** | The selected `mlx_lm.server` process is starting. |
 | **Unavailable** | Check the model directory, Metal support, and application logs. |
 
 ## Migration from v1.x

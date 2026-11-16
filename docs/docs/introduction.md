@@ -2,12 +2,12 @@
 
 **Native local LLM orchestration for Apple Silicon.**
 
-PaglaMLX is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. The Swift runtime combines the menu-bar application, HTTP server, scheduler, and model engine in one process, with a narrow C-compatible bridge into the MLX C++ runtime. Its local gateway at `127.0.0.1:2525/v1` speaks both OpenAI and Anthropic API formats without a Python sidecar.
+PaglaMLX is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. The native macOS application manages Python-based `mlx_lm.server` model processes and FastAPI/Uvicorn gateway proxies. Its local gateway at `127.0.0.1:2525/v1` speaks both OpenAI and Anthropic API formats.
 
 ## Key capabilities
 
 - **One-click model loading** — scan a directory of MLX models, pick one, and press Play.
-- **Native Swift gateway** — a single endpoint at `http://127.0.0.1:2525/v1` speaks OpenAI and Anthropic API formats.
+- **Unified gateway** — a single endpoint at `http://127.0.0.1:2525/v1` speaks OpenAI and Anthropic API formats through the Swift-managed Python gateway.
 - **Smart routing** — prefix-based dispatch (`gpt-` → OpenAI, `claude-` → Anthropic, `gemini-` → Gemini, `openrouter/*`, `groq/*`, `together/*`) plus an Auto-Router for `model=auto`.
 - **14 integration targets** — one-click Apply for VS Code extensions, Claude Desktop, OpenCode, Codex CLI, Continue.dev, and more.
 - **Secure BYOK storage** — provider API keys and bearer tokens are stored in macOS Keychain; legacy UserDefaults credentials migrate with write-before-delete safety.
@@ -25,7 +25,7 @@ This release establishes the native Swift + C++ FFI architecture, documents the 
 - [Review the roadmap](https://github.com/paglaai/PaglaMLX/blob/main/ROADMAP.md)
 - [Browse the source on GitHub](https://github.com/paglaai/PaglaMLX)
 
-> **Runtime note:** Python is not required. PaglaMLX v1.6.0 uses its native Swift server and MLX bridge.
+> **Runtime note:** Python 3.12+ and `mlx-lm`, FastAPI, Uvicorn, and `httpx` are required by the current shipped runtime.
 
 ## Documentation links
 
@@ -61,7 +61,7 @@ Routing + EnginePool + credential policy
 C-compatible MLX bridge → MLX C++ runtime
 ```
 
-The native Swift server is the supported runtime architecture; the former Python gateway is not required or maintained as a compatibility target.
+The shipped runtime is the Swift-managed Python gateway architecture. Native Swift + MLX C++ FFI is a future migration target, not the current runtime.
 
 ## Roadmap
 

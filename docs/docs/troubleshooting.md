@@ -43,7 +43,7 @@ The migration is safe to retry. v1.6.0 writes each legacy credential to Keychain
 
 ## Gateway crashes on startup
 
-The v1.6.0 gateway is native Swift and does not depend on Python, FastAPI, Uvicorn, or `mlx_lm.server`. Check the application logs, verify the configured port, confirm Apple Silicon and macOS 14.0+ requirements, and restart the app.
+The v1.6.0 gateway is Swift-managed but currently depends on Python, FastAPI, Uvicorn, and `mlx_lm.server`. Verify the configured Python executable and required packages, then check the application logs and restart the app.
 
 ## References
 

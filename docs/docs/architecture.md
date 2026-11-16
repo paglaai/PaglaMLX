@@ -1,6 +1,6 @@
-# Native Architecture
+# Runtime Architecture
 
-PaglaMLX v1.6.0 is a native macOS inference runtime for Apple Silicon. The menu-bar application, command-line interface, Swift-NIO HTTP server, routing core, scheduler, credential policy, and model engine share a headless Swift core. MLX-specific work crosses a narrow C-compatible boundary into the MLX C++ runtime.
+PaglaMLX v1.6.0 is a native macOS application that orchestrates a Python-backed local inference runtime on Apple Silicon. Swift owns the menu-bar UI, settings, integrations, process lifecycle, and local configuration. Python processes provide model serving and protocol translation.
 
 ## Request path
 
@@ -8,7 +8,7 @@ PaglaMLX v1.6.0 is a native macOS inference runtime for Apple Silicon. The menu-
 OpenAI / Anthropic client
           │
           ▼
-Swift-NIO HTTP server (:2525/v1)
+Swift-managed FastAPI / Uvicorn gateway (:2525/v1)
           │
           ▼
 Request validation + bearer-token policy
@@ -16,11 +16,11 @@ Request validation + bearer-token policy
           ▼
 Protocol normalization and route selection
           │
-          ├── local model → EnginePool → MLX C++ FFI
+          ├── local model → mlx_lm.server process
           └── cloud provider → provider adapter
 ```
 
-There is no Python gateway, Uvicorn process, or HTTP hop between the server and the engine.
+The shipped runtime includes a Python gateway, Uvicorn process, and HTTP hop between the gateway and each model server.
 
 ## Runtime boundaries
 
@@ -28,17 +28,17 @@ There is no Python gateway, Uvicorn process, or HTTP hop between the server and 
 
 The menu-bar application owns user interaction, model selection, settings, integrations, activity views, and lifecycle controls. It starts or stops the shared core but does not duplicate routing logic.
 
-### Headless Swift core
+### Swift orchestration layer
 
-The shared core owns the HTTP server, request lifecycle, route selection, session stickiness, local model pool, cloud provider dispatch, protocol translation, and failure policy. The CLI can host the same server without the UI.
+The Swift layer owns the process lifecycle, route configuration, session settings, integrations, and failure handling. It starts and monitors the Python gateway and model processes.
 
-### Swift-NIO HTTP server
+### FastAPI/Uvicorn gateway
 
-The server listens on `127.0.0.1:2525` by default and exposes OpenAI-compatible `/v1/chat/completions`, `/v1/models`, and `/v1/embeddings` routes together with Anthropic-compatible `/v1/messages` translation. Bind and authentication settings are explicit so local access remains the safe default.
+The gateway listens on `127.0.0.1:2525` by default and exposes OpenAI-compatible `/v1/chat/completions`, `/v1/models`, and `/v1/embeddings` routes together with Anthropic-compatible `/v1/messages` translation. Bind and authentication settings are explicit so local access remains the safe default.
 
-### EnginePool and MLX bridge
+### ModelOrchestrator and model servers
 
-`EnginePool` owns loaded model instances and their lifecycle. Swift-facing code uses stable value types and explicit ownership. MLX-specific operations cross `MLXBridge.h` through a C-compatible ABI into the C++ implementation. C++ exceptions and failures are converted into Swift errors at the boundary.
+`ModelOrchestrator` launches and monitors one `mlx_lm.server` process per selected model, assigns model ports, and updates the route table. Python owns the current model-serving process; Swift owns its lifecycle.
 
 ### Provider adapters
 
@@ -52,7 +52,7 @@ On first startup after upgrading, `CredentialMigration` reads known legacy value
 
 ## Port strategy
 
-The public local endpoint is `127.0.0.1:2525/v1`. The engine does not require per-model HTTP ports: model instances are managed inside the shared runtime. This removes the old process-per-model and gateway-hop topology while keeping the client-facing API stable.
+The public local endpoint is `127.0.0.1:2525/v1`. Each local `mlx_lm.server` process receives its own model port, typically in the 5000 range. The gateway remains the stable client-facing endpoint and dispatches between those model ports and cloud providers.
 
 ## Failure policy
 
@@ -69,8 +69,8 @@ Logs may contain route names, status codes, and durations, but must not contain 
 
 ## Testing boundaries
 
-HTTP route tests should exercise the server with an in-memory engine or mock provider. MLX bridge tests should validate ABI conversion and error mapping independently. Keychain tests should use an isolated service/account namespace and verify the migration invariant: a `UserDefaults` secret is removed only after its Keychain write succeeds.
+HTTP route tests should exercise the gateway with a mock provider or test model process. Process lifecycle tests should cover startup, route registration, shutdown, and failed Python dependencies. Keychain tests should use an isolated service/account namespace and verify the migration invariant: a `UserDefaults` secret is removed only after its Keychain write succeeds.
 
 ## Version and references
 
-This page documents **PaglaMLX v1.6.0**. See the [project roadmap](https://github.com/paglaai/PaglaMLX/blob/main/ROADMAP.md), [source repository](https://github.com/paglaai/PaglaMLX), and [v1.6.0 release](https://github.com/paglaai/PaglaMLX/releases/tag/v1.6.0) for the current implementation and planned work.
+This page documents **PaglaMLX v1.6.0**. The native Swift + MLX C++ FFI runtime described in the roadmap is a future migration target; it is not the shipped runtime. See the [project roadmap](https://github.com/paglaai/PaglaMLX/blob/main/ROADMAP.md), [source repository](https://github.com/paglaai/PaglaMLX), and [v1.6.0 release](https://github.com/paglaai/PaglaMLX/releases/tag/v1.6.0) for current implementation and planned work.

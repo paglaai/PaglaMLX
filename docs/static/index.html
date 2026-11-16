@@ -83,7 +83,7 @@
       </div>
       <div>
         <h1 class="text-xs font-mono font-bold tracking-widest uppercase">PAGLA / MLX</h1>
-        <p class="text-[9px] font-mono text-[var(--gray-muted)]">native Swift + MLX runtime</p>
+        <p class="text-[9px] font-mono text-[var(--gray-muted)]">Swift-managed Python runtime</p>
       </div>
     </div>
 
@@ -114,7 +114,7 @@
           Local LLM Orchestration,<br>Stripped of Overhead.
         </h2>
         <p class="text-sm md:text-base text-[var(--gray-muted)] font-light max-w-xl leading-relaxed">
-          <strong>PaglaMLX</strong> is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. The Swift runtime combines the menu-bar app, HTTP server, scheduler, and model engine in one process, with a narrow C++ FFI boundary into MLX. Its OpenAI- and Anthropic-compatible gateway at <code>127.0.0.1:2525/v1</code> routes requests to local models or configured cloud providers without a Python sidecar.
+          <strong>PaglaMLX</strong> is a native macOS application that orchestrates and serves MLX-compatible language models locally on Apple Silicon. The macOS app manages Python <code>mlx_lm.server</code> model processes and FastAPI/Uvicorn gateway proxies. Its OpenAI- and Anthropic-compatible gateway at <code>127.0.0.1:2525/v1</code> routes requests to local models or configured cloud providers.
         </p>
       </div>
       
@@ -139,7 +139,7 @@
             API REFERENCE &bull; TRY IT LIVE
           </a>
           <a href="docs/architecture" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
-            ARCHITECTURE &bull; SWIFT + FFI
+            ARCHITECTURE &bull; SWIFT + PYTHON
           </a>
           <a href="https://github.com/paglaai/PaglaMLX/blob/main/ROADMAP.md" target="_blank" class="block text-center text-xs font-mono stark-border py-2 text-[var(--fg)] hover:bg-[var(--fg)] hover:text-[var(--bg)] smooth-transition">
             ROADMAP &bull; V1.6 → 2.0
@@ -242,7 +242,7 @@
       </div>
 
       <p class="text-xs text-[var(--gray-muted)] max-w-xl">
-        The native Swift gateway understands both OpenAI and Anthropic API shapes. Point Claude-native clients (like Claude Desktop) or OpenAI clients at the exact same port. Watch the real-time translation block below.
+        The Swift-managed Python gateway understands both OpenAI and Anthropic API shapes. Point Claude-native clients (like Claude Desktop) or OpenAI clients at the exact same port. Watch the real-time translation block below.
       </p>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

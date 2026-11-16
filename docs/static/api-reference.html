@@ -197,7 +197,7 @@ data: {"type":"message_stop"}</pre>
   <div class="tab-panel" data-panel="models">
     <div class="endpoint-card card-teal">
       <div class="method-line"><span class="method">GET</span><span class="path">/v1/models</span></div>
-      <p class="desc">Lists models currently loaded by the native Swift engine through the MLX C++ bridge. Model IDs match the names shown in the model picker.</p>
+      <p class="desc">Lists models currently loaded by the Swift-managed `mlx_lm.server` model processes. Model IDs match the names shown in the model picker.</p>
     </div>
     <pre>{"object":"list","data":[{"id":"Llama-3.2-3B-Instruct-4bit","object":"model"}]}</pre>
     <div class="endpoint-card card-purple">
