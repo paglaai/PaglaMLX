@@ -7,8 +7,8 @@ const config: Config = {
   tagline: 'Local LLM orchestration for Apple Silicon',
   favicon: 'img/favicon.ico',
 
-  url: 'https://paglaai.github.io',
-  baseUrl: '/PaglaMLX/',
+  url: 'https://www.apphole.store',
+  baseUrl: '/PaglaAI/',
 
   organizationName: 'paglaai',
   projectName: 'PaglaMLX',

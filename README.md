@@ -1,15 +1,11 @@
 <p align="center">
-  <strong>PAGLA / MLX</strong>
+  <img src="PaglaMLX-Banner.svg" alt="PaglaMLX — local LLM orchestration for Apple Silicon" width="100%">
 </p>
 
 <p align="center">
-  <sub>LOCAL LLM ORCHESTRATION &nbsp;·&nbsp; APPLE SILICON &nbsp;·&nbsp; MENU-BAR CONTROL</sub>
-</p>
-
-<p align="center">
-  <a href="https://paglaai.github.io/PaglaMLX/">DOCUMENTATION</a>
+  <a href="https://www.apphole.store/PaglaAI">DOCUMENTATION</a>
   &nbsp;·&nbsp;
-  <a href="https://paglaai.github.io/PaglaMLX/api-reference.html">API REFERENCE</a>
+  <a href="https://www.apphole.store/PaglaAI/api-reference.html">API REFERENCE</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/paglaai/PaglaMLX/releases">RELEASES</a>
   &nbsp;·&nbsp;
@@ -17,8 +13,6 @@
 </p>
 
 ---
-
-> **PaglaMLX** is a native macOS application for orchestrating MLX-compatible language models on Apple Silicon. Swift owns the menu-bar experience and process lifecycle; Python provides the current `mlx_lm.server` model processes and FastAPI/Uvicorn gateway proxies.
 
 ```text
 PAGLAMLX  /  v1.6.0  /  STABLE
@@ -30,142 +24,28 @@ GATEWAY              FastAPI + Uvicorn
 CREDENTIALS          macOS Keychain
 ```
 
-## 01 / What it does
+## 01 / What is PaglaMLX?
 
-PaglaMLX gives local models one stable, OpenAI- and Anthropic-compatible endpoint. Load models from the menu bar, route requests by model name or intent, connect developer tools, and fall back to cloud providers when needed.
+PaglaMLX is a macOS menu-bar application for running and orchestrating MLX-compatible language models on Apple Silicon. It gives local models a stable API surface, manages their lifecycle, and connects them to the tools developers already use.
 
-- Load and unload multiple MLX models from a single menu-bar application.
-- Route `model=auto` requests using capability, context, and intent signals.
-- Translate Anthropic `/v1/messages` requests to and from OpenAI-compatible shapes.
-- Dispatch cloud requests by provider prefix.
-- Apply integrations for editors, coding agents, and desktop clients.
-- Store provider keys and bearer tokens in macOS Keychain.
-- Keep session requests sticky to the selected backend.
+The current v1.6.0 release uses Swift for the macOS application and process orchestration, with Python model servers and gateway proxies managed behind the scenes.
 
-## 02 / Install
+## 02 / What does it do?
 
-### Download the app
+PaglaMLX turns a folder of local MLX models into one controllable inference workspace.
 
-Download the latest `.dmg` from [GitHub Releases](https://github.com/paglaai/PaglaMLX/releases), open it, and drag `PaglaMLX.app` to `Applications`.
+- Loads and unloads multiple models from the menu bar.
+- Exposes OpenAI-compatible and Anthropic-compatible endpoints.
+- Routes `model=auto` requests using model capability, context, and request intent.
+- Dispatches cloud requests by provider prefix.
+- Maintains session stickiness for consistent multi-turn behavior.
+- Applies configuration for coding agents, editors, and desktop clients.
+- Stores API keys and bearer tokens in macOS Keychain.
+- Provides an optional cloud fallback through configured providers or OpenRouter.
 
-### Runtime requirements
+## 03 / How does it do that?
 
-| Requirement | Version / value |
-|---|---|
-| Operating system | macOS 14.0+ |
-| Hardware | Apple Silicon: M1, M2, M3, or M4 |
-| Python | 3.12+ |
-| Model serving | `mlx-lm` |
-| Gateway packages | `fastapi`, `uvicorn`, `httpx` |
-
-Install the Python runtime dependencies before launching the app:
-
-```bash
-pip3 install mlx-lm fastapi uvicorn httpx
-```
-
-### Build from source
-
-```bash
-git clone https://github.com/paglaai/PaglaMLX.git
-cd PaglaMLX
-./build_dmg.sh
-```
-
-Or build the Swift package directly:
-
-```bash
-swift build -c release
-```
-
-## 03 / First run
-
-1. Open **Settings → App** and choose the directory containing your MLX model folders.
-2. Open **Settings → Python** and confirm the Python 3.12+ executable.
-3. Run the preflight checks and resolve any missing package or permission warnings.
-4. Choose a model from the menu-bar picker and press **Play**.
-5. Connect a compatible client to `http://127.0.0.1:2525/v1`.
-
-A model directory typically looks like this:
-
-```text
-~/Models/mlx/
-├── Llama-3.2-3B-Instruct-4bit/
-│   ├── config.json
-│   ├── tokenizer.json
-│   └── *.safetensors
-├── Mistral-7B-Instruct-4bit/
-│   └── ...
-└── Qwen2.5-Coder-7B-4bit/
-    └── ...
-```
-
-## 04 / Request surface
-
-### OpenAI-compatible
-
-```bash
-curl http://127.0.0.1:2525/v1/chat/completions \
-  -H "Authorization: Bearer <your-key>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "auto",
-    "messages": [
-      {"role": "user", "content": "Hello from PaglaMLX."}
-    ]
-  }'
-```
-
-### Anthropic-compatible
-
-```bash
-curl http://127.0.0.1:2525/v1/messages \
-  -H "x-api-key: <your-key>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "auto",
-    "max_tokens": 512,
-    "messages": [
-      {"role": "user", "content": "Hello from Claude-compatible tooling."}
-    ]
-  }'
-```
-
-The local bearer token is configured in **Settings → Network**. Current credentials are stored in Keychain; do not use `defaults read` to retrieve secrets.
-
-## 05 / Routing logic
-
-```text
-01  EXACT LOCAL MATCH       model name matches a loaded route
-02  AUTO-ROUTER             capability + context + request intent
-03  CLOUD PREFIX            provider-specific model prefixes
-04  FREE ROUTER             optional OpenRouter fallback
-05  SESSION STICKINESS      reuse the session's selected backend
-06  LOCAL FALLBACK          first available local model
-07  HTTP 503                no usable route exists
-```
-
-| Prefix | Provider |
-|---|---|
-| `gpt-`, `o1`, `o3` | OpenAI |
-| `claude-` | Anthropic |
-| `gemini-` | Gemini |
-| `openrouter/` | OpenRouter |
-| `groq/` | Groq |
-| `together/` | Together AI |
-
-## 06 / Client integrations
-
-PaglaMLX can apply endpoint and credential settings for common local-AI clients:
-
-- VS Code, Copilot, Cline, Kilo Code, and Continue.dev
-- Claude Desktop and Claude Code
-- OpenCode and Codex CLI
-- Agent Hermes, OpenClaw, and Qwen Code
-
-Open **Settings → Integrations**, select a client, review the target configuration, and choose **Apply**.
-
-## 07 / Runtime architecture
+The Swift application is the control plane. It runs preflight checks, resolves the Python environment, starts the gateway, launches one `mlx_lm.server` process per selected model, assigns model ports, and monitors process health.
 
 ```text
 ┌──────────────────────┐
@@ -188,9 +68,160 @@ Open **Settings → Integrations**, select a client, review the target configura
            └──────────────▶ Free Router fallback
 ```
 
-The current shipped release uses Swift-managed Python processes. A future native Swift + MLX C++ FFI runtime is documented in the [architecture reference](docs/architecture.md) and tracked in the [roadmap](ROADMAP.md); it is not yet the production runtime.
+### Routing order
 
-## 08 / Security baseline
+```text
+01  EXACT LOCAL MATCH       model name matches a loaded route
+02  AUTO-ROUTER             capability + context + request intent
+03  CLOUD PREFIX            provider-specific model prefixes
+04  FREE ROUTER             optional OpenRouter fallback
+05  SESSION STICKINESS      reuse the session's selected backend
+06  LOCAL FALLBACK          first available local model
+07  HTTP 503                no usable route exists
+```
+
+| Prefix | Provider |
+|---|---|
+| `gpt-`, `o1`, `o3` | OpenAI |
+| `claude-` | Anthropic |
+| `gemini-` | Gemini |
+| `openrouter/` | OpenRouter |
+| `groq/` | Groq |
+| `together/` | Together AI |
+
+## 04 / Why is it better or different?
+
+PaglaMLX is designed around control, compatibility, and low-friction local inference rather than a single model or single client.
+
+| Difference | Why it matters |
+|---|---|
+| Menu-bar control | Start, stop, inspect, and route models without maintaining terminal sessions. |
+| One stable endpoint | Clients do not need to know which model process or port is active. |
+| Dual protocol support | OpenAI-native and Anthropic-native tools can share the same local gateway. |
+| Local-first routing | Requests can stay on-device, with cloud fallback available when explicitly configured. |
+| Model concurrency | Multiple model processes can remain available and be selected by route. |
+| Keychain credentials | Provider keys and bearer tokens are not kept in plain-text preferences. |
+| Integration actions | Common client configuration can be applied from one settings panel. |
+| Apple Silicon focus | The workflow is tuned for MLX models and macOS hardware. |
+
+A future native Swift + MLX C++ FFI runtime is documented in the [architecture reference](docs/architecture.md) and tracked in the [roadmap](ROADMAP.md). That migration is not yet the shipped v1.6.0 runtime.
+
+## 05 / Recommended best-case usages
+
+PaglaMLX is best suited to developers and small teams who want local models available through familiar APIs.
+
+- **Private coding assistance:** connect Claude Desktop, Claude Code, Continue.dev, Cline, or VS Code to models running on your Mac.
+- **Model comparison:** keep several MLX models loaded and route requests by model name or `auto`.
+- **Offline prototyping:** develop against an OpenAI-compatible endpoint without sending every prompt to a hosted provider.
+- **Hybrid workflows:** keep routine or sensitive requests local and use provider prefixes for tasks that need cloud capacity.
+- **Client integration testing:** exercise OpenAI- or Anthropic-shaped clients against a controllable local endpoint.
+- **Apple Silicon experimentation:** test quantized MLX models while monitoring process and memory behavior from the menu bar.
+
+PaglaMLX is not intended to replace a hardened multi-tenant production inference platform, public API gateway, or distributed serving cluster.
+
+## 06 / How is it built?
+
+PaglaMLX is a Swift Package Manager project with a native macOS UI and Swift-owned process orchestration. The current runtime boundary is explicit:
+
+- **SwiftUI / AppKit:** menu-bar interface, settings, integrations, preflight, and lifecycle.
+- **Swift orchestration:** Python discovery, process startup, route registration, health monitoring, and shutdown.
+- **FastAPI / Uvicorn:** local OpenAI-compatible gateway and Anthropic translation proxy.
+- **`mlx_lm.server`:** one Python model-serving process per selected MLX model.
+- **macOS Keychain Services:** secure provider-key and bearer-token storage.
+- **Swift Package Manager:** source builds and release packaging.
+
+### Requirements
+
+| Requirement | Version / value |
+|---|---|
+| Operating system | macOS 14.0+ |
+| Hardware | Apple Silicon: M1, M2, M3, or M4 |
+| Python | 3.12+ |
+| Model serving | `mlx-lm` |
+| Gateway packages | `fastapi`, `uvicorn`, `httpx` |
+
+## 07 / How do I use it?
+
+### Install the app
+
+Download the latest `.dmg` from [GitHub Releases](https://github.com/paglaai/PaglaMLX/releases), open it, and drag `PaglaMLX.app` to `Applications`.
+
+Install the current Python runtime dependencies before launching:
+
+```bash
+pip3 install mlx-lm fastapi uvicorn httpx
+```
+
+### Build from source
+
+```bash
+git clone https://github.com/paglaai/PaglaMLX.git
+cd PaglaMLX
+./build_dmg.sh
+```
+
+Or build the Swift package directly:
+
+```bash
+swift build -c release
+```
+
+### First run
+
+1. Open **Settings → App** and choose the directory containing your MLX model folders.
+2. Open **Settings → Python** and confirm the Python 3.12+ executable.
+3. Run preflight and resolve missing package or permission warnings.
+4. Choose a model from the menu-bar picker and press **Play**.
+5. Connect a client to `http://127.0.0.1:2525/v1`.
+
+A model directory typically looks like this:
+
+```text
+~/Models/mlx/
+├── Llama-3.2-3B-Instruct-4bit/
+│   ├── config.json
+│   ├── tokenizer.json
+│   └── *.safetensors
+├── Mistral-7B-Instruct-4bit/
+│   └── ...
+└── Qwen2.5-Coder-7B-4bit/
+    └── ...
+```
+
+### Send a request
+
+```bash
+curl http://127.0.0.1:2525/v1/chat/completions \
+  -H "Authorization: Bearer <your-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "user", "content": "Hello from PaglaMLX."}
+    ]
+  }'
+```
+
+For Anthropic-native clients, use `POST /v1/messages`. The local bearer token is configured in **Settings → Network** and stored in Keychain. Do not retrieve secrets with `defaults read` or commit them to configuration files.
+
+### Apply an integration
+
+Open **Settings → Integrations**, select a client, review the target configuration, and choose **Apply**. PaglaMLX can configure common tools including VS Code, Continue.dev, Claude Desktop, Claude Code, OpenCode, Codex CLI, Cline, and Qwen Code.
+
+## 08 / Documentation and support
+
+| Resource | Link |
+|---|---|
+| Documentation | [apphole.store/PaglaAI](https://www.apphole.store/PaglaAI) |
+| API reference | [API reference](https://www.apphole.store/PaglaAI/api-reference.html) |
+| Architecture | [Runtime architecture](docs/architecture.md) |
+| Roadmap | [ROADMAP.md](ROADMAP.md) |
+| Security | [SECURITY.md](SECURITY.md) |
+| Releases | [GitHub Releases](https://github.com/paglaai/PaglaMLX/releases) |
+| Support and issues | [GitHub Issues](https://github.com/paglaai/PaglaMLX/issues) |
+| Contact | [PaglaMLX@apphole.store](mailto:PaglaMLX@apphole.store) |
+
+## 09 / Security baseline
 
 - Bind locally to `127.0.0.1` by default.
 - Keep API keys and bearer tokens in macOS Keychain.
@@ -198,37 +229,20 @@ The current shipped release uses Swift-managed Python processes. A future native
 - Do not log prompts, generated content, provider responses, or credentials.
 - Treat non-loopback binding and public tunnels as explicit security decisions.
 
-Read the [security policy](SECURITY.md) before reporting a vulnerability.
+Read [SECURITY.md](SECURITY.md) before reporting a vulnerability.
 
-## 09 / Documentation map
+## 10 / License and attribution
 
-| Document | Purpose |
-|---|---|
-| [Getting started](docs/docs/getting-started.md) | Install, configure, load, and call a model |
-| [Runtime architecture](docs/docs/architecture.md) | Current process boundaries and request flow |
-| [Building](docs/docs/building.md) | Build the app and DMG from source |
-| [API reference](https://paglaai.github.io/PaglaMLX/api-reference.html) | Endpoint shapes and examples |
-| [Roadmap](ROADMAP.md) | Current priorities and future native migration |
-| [Roadmap](ROADMAP.md) | Changes between runtime generations and future native migration |
-| [Security policy](SECURITY.md) | Responsible disclosure and credential handling |
+**License:** MIT — see [LICENSE](LICENSE).
 
-## 10 / Contributing
+**PaglaAI © 2026 | An Aynaghor Local AI Intelligent Initiative**
 
-Contributions are welcome. Before opening a pull request:
+**Contact:** [PaglaMLX@apphole.store](mailto:PaglaMLX@apphole.store)
 
-1. Read the relevant architecture and build documentation.
-2. Keep secrets out of source, logs, screenshots, and commits.
-3. Add or update tests for behavior changes.
-4. Open an issue first for substantial architectural changes.
-
-Report bugs and request features through [GitHub Issues](https://github.com/paglaai/PaglaMLX/issues).
-
-## 11 / License
-
-MIT — see [LICENSE](LICENSE).
+The repository banner uses Pagla Sans from [PaglaDESIGN](https://github.com/paglaai/PaglaDESIGN/tree/main/fonts). Font redistribution terms are included in [`fonts/LICENSE.txt`](fonts/LICENSE.txt).
 
 ---
 
 <p align="center">
-  <sub>PAGLA / MLX &nbsp;·&nbsp; LOCAL FIRST &nbsp;·&nbsp; APPLE SILICON</sub>
+  <sub>PAGLA / MLX &nbsp;·&nbsp; LOCAL FIRST &nbsp;·&nbsp; APPLE SILICON &nbsp;·&nbsp; PAGLA DESIGN</sub>
 </p>
