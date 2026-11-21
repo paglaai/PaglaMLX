@@ -93,9 +93,33 @@ PaglaMLX adheres strictly to the operational doctrine established in [PaglaDESIG
 - **Air-Gapped Sovereign Execution**: Zero telemetry calls, zero remote model downloads during production runtime.
 - **Localhost Boundary**: Binds exclusively to `127.0.0.1` by default to prevent unauthorized network bridging.
 
-${ecosystemDirectory}
+## Ecosystem Directory
 
-${emailSection}
+| Repository | Role | Surface Link |
+| :--- | :--- | :--- |
+| **[PaglaSPACE](https://github.com/paglaai/PaglaSPACE)** | Sovereign Web Gateway & Showcase | [www.paglaai.space](https://www.paglaai.space) |
+| **[PaglaDESIGN](https://github.com/paglaai/PaglaDESIGN)** | Canonical Design Authority & FastMCP | [paglaai.github.io/pagladesign](https://paglaai.github.io/pagladesign) |
+| **[PaglaMLX](https://github.com/paglaai/PaglaMLX)** | Apple Silicon Local MLX Inference | [paglaai.space/products/paglamlx.html](https://www.paglaai.space/products/paglamlx.html) |
+| **[PaglaGPT](https://github.com/paglaai/PaglaGPT)** | Sovereign AI Architect & Reasoner | [paglaai.space/products/paglagpt.html](https://www.paglaai.space/products/paglagpt.html) |
+| **[PaglaROUTER](https://github.com/paglaai/PaglaROUTER)** | Fail-Closed LLM Load Balancer & Proxy | [paglaai.space/products/](https://www.paglaai.space/products/) |
+| **[PaglaDOC](https://github.com/paglaai/PaglaDOC)** | Fern Documentation & OpenAPI Engine | [paglaai.docs.buildwithfern.com](https://paglaai.docs.buildwithfern.com) |
+| **[PaglaEXTENSION](https://github.com/paglaai/PaglaEXTENSION)** | Ambient Browser Companion & Sidecar | [paglaai.space/products/](https://www.paglaai.space/products/) |
+| **[B3K4R](https://github.com/paglaai/B3K4R)** | Autonomous Agent & Workflow Daemon | [paglaai.space/products/](https://www.paglaai.space/products/) |
+
+
+## Communications & Inquiries
+
+PaglaAI enforces strictly segmented, dedicated communication channels for operational integrity and privacy:
+
+| Channel | Dedicated Address | Scope & Handling |
+| :--- | :--- | :--- |
+| **Technical & Product** | `info@paglaai.space` | General developer inquiries, runtime integration, and feedback. |
+| **Legal & Compliance** | `legal@paglaai.space` | Licensing, terms of service, IP governance, and compliance. |
+| **Security & Disclosure** | `security@paglaai.space` | Vulnerability disclosures, cryptographic review, and audit findings. |
+| **Systems & Operations** | `ops@paglaai.space` | Edge infrastructure, routing availability, and deployment health. |
+| **Parent Entity (AYNAGHOR)** | `PaglaAI@aynaghor.space` | Organizational leadership, ecosystem charter, and core directives. |
+| **Executive Office** | `SecondSON@aynaghor.space` | Strategic architecture, sovereign identity, and high-altitude review. |
+
 
 ## License
 
